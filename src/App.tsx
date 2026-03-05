@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Brain, CloudLightning, CheckCircle, Copy, UploadCloud } from 'lucide-react';
 import { recognizeText } from './lib/ocr';
 import { calculateStake } from './lib/utils';
-import { getWeather, getRealOdds, getBetStackData, getBizzoPrediction, getGameForecast, getBytezAnalysis } from './lib/api';
-import { predictWithModel } from './lib/ai';
+import { getWeather, getRealOdds, getBetStackData, getBizzoPrediction, getGameForecast, getBytezAnalysis, getPlayerMetrics } from './lib/api';
+import { predictWithModel, createAndTrainModel } from './lib/ai';
 import { footballData } from './lib/data';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -102,11 +102,7 @@ export default function App() {
             const newPredictions = [];
             
             // Ensure historical data is loaded before processing
-            setLoadingStep("Loading historical data and team form...");
-            await footballData.loadData();
-
-            setLoadingStep("Training AI model with latest data...");
-            await createAndTrainModel();
+            await createAndTrainModel((msg) => setLoadingStep(msg));
 
             for (let i = 0; i < games.slice(0, 10).length; i++) {
                 const game = games[i];
@@ -125,6 +121,10 @@ export default function App() {
                 const homeForm = footballData.getTeamForm(game.home);
                 const awayForm = footballData.getTeamForm(game.away);
                 const h2h = footballData.getH2H(game.home, game.away);
+                
+                // Fetch player metrics
+                const homePlayerMetrics = await getPlayerMetrics(game.home);
+                const awayPlayerMetrics = await getPlayerMetrics(game.away);
 
                 const features = [
                     game.oddsH || odds.avgH || 2.5, 
@@ -135,7 +135,13 @@ export default function App() {
                     homeForm.gc, awayForm.gc,
                     homeForm.sot, awayForm.sot,
                     h2h.homeWins, h2h.awayWins, h2h.draws,
-                    1 // Home advantage
+                    1, // Home advantage
+                    homePlayerMetrics.keyPlayerForm,
+                    homePlayerMetrics.injuryImpact,
+                    homePlayerMetrics.disciplineImpact,
+                    awayPlayerMetrics.keyPlayerForm,
+                    awayPlayerMetrics.injuryImpact,
+                    awayPlayerMetrics.disciplineImpact
                 ];
 
                 const probs = await predictWithModel(features);

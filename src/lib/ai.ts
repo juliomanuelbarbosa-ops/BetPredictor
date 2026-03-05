@@ -1,9 +1,9 @@
 import * as tf from '@tensorflow/tfjs';
 import { footballData } from './data';
 
-let model: tf.Sequential | null = null;
+let ensembleModels: tf.Sequential[] = [];
 
-// Feature vector size: 15
+// Feature vector size: 21
 // 0: Odds H, 1: Odds D, 2: Odds A
 // 3: Home Form Pts, 4: Away Form Pts
 // 5: Home GS, 6: Away GS
@@ -11,17 +11,18 @@ let model: tf.Sequential | null = null;
 // 9: Home SoT avg, 10: Away SoT avg
 // 11: H2H Home Wins, 12: H2H Away Wins, 13: H2H Draws
 // 14: Home Advantage (1 for home, 0 for neutral)
+// 15: Home Key Player Form
+// 16: Home Injury Impact
+// 17: Home Discipline Impact
+// 18: Away Key Player Form
+// 19: Away Injury Impact
+// 20: Away Discipline Impact
 
-export async function createAndTrainModel() {
-    if (model) return model;
-    
-    // Ensure data is loaded
-    await footballData.loadData();
-    
-    model = tf.sequential();
+function createBaseModel() {
+    const model = tf.sequential();
     
     // Deeper, more robust architecture for tabular data
-    model.add(tf.layers.dense({units: 128, inputShape: [15], activation: 'relu', kernelRegularizer: tf.regularizers.l2({l2: 0.01})}));
+    model.add(tf.layers.dense({units: 128, inputShape: [21], activation: 'relu', kernelRegularizer: tf.regularizers.l2({l2: 0.01})}));
     model.add(tf.layers.batchNormalization());
     model.add(tf.layers.dropout({rate: 0.3}));
     
@@ -39,27 +40,42 @@ export async function createAndTrainModel() {
         loss: 'sparseCategoricalCrossentropy',
         metrics: ['accuracy']
     });
-
-    await loadHistoricalData(model);
+    
     return model;
 }
 
-async function loadHistoricalData(model: tf.Sequential) {
+export async function createAndTrainModel(onProgress?: (msg: string) => void) {
+    if (ensembleModels.length > 0) return ensembleModels;
+    
+    // Ensure data is loaded
+    if (onProgress) onProgress("Loading historical match data...");
+    await footballData.loadData();
+    
+    // Create an ensemble of 3 models
+    for (let i = 0; i < 3; i++) {
+        ensembleModels.push(createBaseModel());
+    }
+
+    await loadHistoricalData(ensembleModels, onProgress);
+    return ensembleModels;
+}
+
+async function loadHistoricalData(models: tf.Sequential[], onProgress?: (msg: string) => void) {
     const matches = footballData.getMatches();
     if (matches.length === 0) return;
 
-    // We'll use the last 1000 matches for training to keep it fast but effective
-    const trainingData = matches.slice(-1000);
+    // We'll use the last 2000 matches for training
+    if (onProgress) onProgress("Preparing training data from 2000 matches...");
+    const trainingData = matches.slice(-2000);
     
     const features: number[][] = [];
     const labels: number[] = [];
 
     for (const m of trainingData) {
-        // Mocking historical form by just using the current form getter (in a real app, we'd calculate form *up to* the match date)
-        // For simplicity and speed in this browser-based model, we use the general form.
-        const homeForm = footballData.getTeamForm(m.HomeTeam);
-        const awayForm = footballData.getTeamForm(m.AwayTeam);
-        const h2h = footballData.getH2H(m.HomeTeam, m.AwayTeam);
+        // Pass m.Date to ensure we only calculate form up to the match date
+        const homeForm = footballData.getTeamForm(m.HomeTeam, m.Date);
+        const awayForm = footballData.getTeamForm(m.AwayTeam, m.Date);
+        const h2h = footballData.getH2H(m.HomeTeam, m.AwayTeam, m.Date);
 
         const row = [
             m.B365H, m.B365D, m.B365A,
@@ -68,7 +84,14 @@ async function loadHistoricalData(model: tf.Sequential) {
             homeForm.gc, awayForm.gc,
             homeForm.sot, awayForm.sot,
             h2h.homeWins, h2h.awayWins, h2h.draws,
-            1 // Home advantage
+            1, // Home advantage
+            // Mock historical player metrics (in a real app, this would be historical player data)
+            5 + Math.random() * 4, // Home Key Player Form
+            Math.random() * 4, // Home Injury Impact
+            Math.random() * 2, // Home Discipline Impact
+            5 + Math.random() * 4, // Away Key Player Form
+            Math.random() * 4, // Away Injury Impact
+            Math.random() * 2 // Away Discipline Impact
         ];
         
         features.push(row);
@@ -80,26 +103,42 @@ async function loadHistoricalData(model: tf.Sequential) {
     const xs = tf.tensor2d(features);
     const ys = tf.tensor1d(labels, 'float32');
 
-    // Early stopping callback to prevent overfitting
-    const earlyStopping = tf.callbacks.earlyStopping({ monitor: 'loss', patience: 3 });
-
-    await model.fit(xs, ys, {
-        epochs: 15, 
-        batchSize: 32,
-        shuffle: true,
-        callbacks: [earlyStopping]
-    });
+    // Train each model in the ensemble
+    for (let i = 0; i < models.length; i++) {
+        if (onProgress) onProgress(`Training ensemble model ${i + 1}/3...`);
+        await models[i].fit(xs, ys, {
+            epochs: 15, 
+            batchSize: 32,
+            shuffle: true
+        });
+    }
     
     xs.dispose(); 
     ys.dispose();
 }
 
 export async function predictWithModel(features: number[]) {
-    const m = await createAndTrainModel();
+    const models = await createAndTrainModel();
     const input = tf.tensor2d([features]);
-    const prediction = m.predict(input) as tf.Tensor;
-    const probs = await prediction.data();
+    
+    let totalProbs = [0, 0, 0];
+    
+    // Average the predictions from all models in the ensemble
+    for (const model of models) {
+        const prediction = model.predict(input) as tf.Tensor;
+        const probs = await prediction.data();
+        totalProbs[0] += probs[0];
+        totalProbs[1] += probs[1];
+        totalProbs[2] += probs[2];
+        prediction.dispose();
+    }
+    
     input.dispose();
-    prediction.dispose();
-    return Array.from(probs);
+    
+    // Normalize averaged probabilities
+    return [
+        totalProbs[0] / models.length,
+        totalProbs[1] / models.length,
+        totalProbs[2] / models.length
+    ];
 }

@@ -9,6 +9,10 @@ interface MatchRecord {
     FTR: string;
     HST: number;
     AST: number;
+    HY: number;
+    AY: number;
+    HR: number;
+    AR: number;
     B365H: number;
     B365D: number;
     B365A: number;
@@ -27,7 +31,11 @@ class FootballDataService {
             "https://www.football-data.co.uk/mmz4281/2324/D1.csv",
             "https://www.football-data.co.uk/mmz4281/2425/D1.csv",
             "https://www.football-data.co.uk/mmz4281/2324/SP1.csv",
-            "https://www.football-data.co.uk/mmz4281/2425/SP1.csv"
+            "https://www.football-data.co.uk/mmz4281/2425/SP1.csv",
+            "https://www.football-data.co.uk/mmz4281/2324/I1.csv",
+            "https://www.football-data.co.uk/mmz4281/2425/I1.csv",
+            "https://www.football-data.co.uk/mmz4281/2324/F1.csv",
+            "https://www.football-data.co.uk/mmz4281/2425/F1.csv"
         ];
 
         for (const url of urls) {
@@ -39,25 +47,46 @@ class FootballDataService {
                 
                 const validMatches = parsed.data
                     .filter((r: any) => r.HomeTeam && r.AwayTeam && r.FTR)
-                    .map((r: any) => ({
-                        Date: r.Date,
-                        HomeTeam: r.HomeTeam,
-                        AwayTeam: r.AwayTeam,
-                        FTHG: parseInt(r.FTHG) || 0,
-                        FTAG: parseInt(r.FTAG) || 0,
-                        FTR: r.FTR,
-                        HST: parseInt(r.HST) || 0,
-                        AST: parseInt(r.AST) || 0,
-                        B365H: parseFloat(r.B365H) || 2.5,
-                        B365D: parseFloat(r.B365D) || 3.5,
-                        B365A: parseFloat(r.B365A) || 3.5,
-                    }));
+                    .map((r: any) => {
+                        // Parse date (DD/MM/YYYY)
+                        let parsedDate = new Date();
+                        if (r.Date) {
+                            const parts = r.Date.split('/');
+                            if (parts.length === 3) {
+                                // football-data.co.uk uses DD/MM/YYYY or DD/MM/YY
+                                const year = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+                                parsedDate = new Date(`${year}-${parts[1]}-${parts[0]}`);
+                            }
+                        }
+
+                        return {
+                            Date: parsedDate.toISOString(),
+                            HomeTeam: r.HomeTeam,
+                            AwayTeam: r.AwayTeam,
+                            FTHG: parseInt(r.FTHG) || 0,
+                            FTAG: parseInt(r.FTAG) || 0,
+                            FTR: r.FTR,
+                            HST: parseInt(r.HST) || 0,
+                            AST: parseInt(r.AST) || 0,
+                            HY: parseInt(r.HY) || 0,
+                            AY: parseInt(r.AY) || 0,
+                            HR: parseInt(r.HR) || 0,
+                            AR: parseInt(r.AR) || 0,
+                            B365H: parseFloat(r.B365H) || 2.5,
+                            B365D: parseFloat(r.B365D) || 3.5,
+                            B365A: parseFloat(r.B365A) || 3.5,
+                        };
+                    });
                 
                 this.matches = [...this.matches, ...validMatches];
             } catch (e) {
                 console.warn(`Failed to load ${url}`);
             }
         }
+        
+        // Sort matches by date
+        this.matches.sort((a, b) => new Date(a.Date).getTime() - new Date(b.Date).getTime());
+        
         this.isLoaded = true;
     }
 
@@ -65,16 +94,18 @@ class FootballDataService {
         return this.matches;
     }
 
-    getTeamForm(team: string, upToDate?: string): { pts: number, gs: number, gc: number, sot: number } {
-        // Find last 5 matches for the team
+    getTeamForm(team: string, upToDate?: string): { pts: number, gs: number, gc: number, sot: number, yc: number, rc: number } {
+        // Find matches for the team
         let teamMatches = this.matches.filter(m => 
             m.HomeTeam.toLowerCase().includes(team.toLowerCase()) || 
             m.AwayTeam.toLowerCase().includes(team.toLowerCase())
         );
 
-        // If upToDate is provided, only consider matches before that date (useful for training data generation)
-        // For simplicity in this mock, we'll just take the last 5 in the array if no date logic is strictly applied,
-        // assuming the CSV is chronological.
+        // If upToDate is provided, only consider matches before that date
+        if (upToDate) {
+            const limitDate = new Date(upToDate).getTime();
+            teamMatches = teamMatches.filter(m => new Date(m.Date).getTime() < limitDate);
+        }
         
         const last5 = teamMatches.slice(-5);
         
@@ -82,37 +113,84 @@ class FootballDataService {
         let gs = 0;
         let gc = 0;
         let sot = 0;
+        let yc = 0;
+        let rc = 0;
+        let totalWeight = 0;
 
-        for (const m of last5) {
+        // Apply weighting: more recent matches have higher weight
+        // last5 array is chronological: index 0 is oldest, index 4 is newest
+        for (let i = 0; i < last5.length; i++) {
+            const m = last5[i];
+            // Weight increases from 0.6 to 1.0 for the 5 matches
+            const weight = 0.6 + (0.1 * i);
+            totalWeight += weight;
+
             const isHome = m.HomeTeam.toLowerCase().includes(team.toLowerCase());
+            
+            let matchPts = 0;
+            let matchGs = 0;
+            let matchGc = 0;
+            let matchSot = 0;
+            let matchYc = 0;
+            let matchRc = 0;
+
             if (isHome) {
-                gs += m.FTHG;
-                gc += m.FTAG;
-                sot += m.HST;
-                if (m.FTR === 'H') pts += 3;
-                else if (m.FTR === 'D') pts += 1;
+                matchGs = m.FTHG;
+                matchGc = m.FTAG;
+                matchSot = m.HST;
+                matchYc = m.HY;
+                matchRc = m.HR;
+                if (m.FTR === 'H') matchPts = 3;
+                else if (m.FTR === 'D') matchPts = 1;
             } else {
-                gs += m.FTAG;
-                gc += m.FTHG;
-                sot += m.AST;
-                if (m.FTR === 'A') pts += 3;
-                else if (m.FTR === 'D') pts += 1;
+                matchGs = m.FTAG;
+                matchGc = m.FTHG;
+                matchSot = m.AST;
+                matchYc = m.AY;
+                matchRc = m.AR;
+                if (m.FTR === 'A') matchPts = 3;
+                else if (m.FTR === 'D') matchPts = 1;
             }
+
+            pts += matchPts * weight;
+            gs += matchGs * weight;
+            gc += matchGc * weight;
+            sot += matchSot * weight;
+            yc += matchYc * weight;
+            rc += matchRc * weight;
         }
 
         // Fallback if no data found (e.g. team not in CSV)
         if (last5.length === 0) {
-            return { pts: 7, gs: 6, gc: 6, sot: 20 }; // Average realistic stats
+            return { pts: 7, gs: 6, gc: 6, sot: 20, yc: 10, rc: 0 }; // Average realistic stats
         }
 
-        return { pts, gs, gc, sot: sot / last5.length };
+        // Normalize by total weight to keep values in expected ranges
+        // Multiply by 5 to simulate the sum of 5 matches as expected by the model
+        const normalizationFactor = 5 / totalWeight;
+
+        return { 
+            pts: pts * normalizationFactor, 
+            gs: gs * normalizationFactor, 
+            gc: gc * normalizationFactor, 
+            sot: (sot / totalWeight), // sot is an average per match
+            yc: yc * normalizationFactor,
+            rc: rc * normalizationFactor
+        };
     }
 
-    getH2H(home: string, away: string): { homeWins: number, awayWins: number, draws: number } {
-        const h2h = this.matches.filter(m => 
+    getH2H(home: string, away: string, upToDate?: string): { homeWins: number, awayWins: number, draws: number } {
+        let h2hMatches = this.matches.filter(m => 
             (m.HomeTeam.toLowerCase().includes(home.toLowerCase()) && m.AwayTeam.toLowerCase().includes(away.toLowerCase())) ||
             (m.HomeTeam.toLowerCase().includes(away.toLowerCase()) && m.AwayTeam.toLowerCase().includes(home.toLowerCase()))
-        ).slice(-5);
+        );
+
+        if (upToDate) {
+            const limitDate = new Date(upToDate).getTime();
+            h2hMatches = h2hMatches.filter(m => new Date(m.Date).getTime() < limitDate);
+        }
+
+        const h2h = h2hMatches.slice(-5);
 
         let homeWins = 0;
         let awayWins = 0;

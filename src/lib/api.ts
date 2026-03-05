@@ -1,3 +1,5 @@
+import { footballData } from './data';
+
 const OPENWEATHER_KEY   = "12bd58096ee6939132a07606372444174";
 const ODDS_API_KEY      = "7e8903b0f86e4bff14b6ba1df2d860a724e2adb3e69d8ae3eaaf4dbdfaae6023";
 
@@ -50,10 +52,34 @@ export async function getGameForecast() {
     return { home_prob: 40 + Math.random() * 20 };
 }
 
+export async function getPlayerMetrics(team: string) {
+    // In a real application, this would fetch from a sports data API (e.g., Sportmonks, API-Football)
+    // to get live injury lists, suspension data, and key player recent ratings.
+    // For this demonstration, we simulate realistic metrics.
+    
+    // keyPlayerForm: 0-10 scale (higher is better)
+    // injuryImpact: 0-10 scale (higher means more negative impact on the team)
+    // disciplineImpact: 0-10 scale (higher means more negative impact, e.g., key suspensions)
+    
+    return {
+        keyPlayerForm: 5 + Math.random() * 4, // 5 to 9
+        injuryImpact: Math.random() * 4, // 0 to 4
+        disciplineImpact: Math.random() * 2 // 0 to 2
+    };
+}
+
 const BYTEZ_API_KEY = import.meta.env.VITE_BYTEZ_API_KEY || "e6eb939af9210a143459fbdf38262663";
 
 export async function getBytezAnalysis(home: string, away: string, weather: any, odds: any, betstack: any): Promise<{ market: string, confidence: number, report: string }> {
     try {
+        const h2h = footballData.getH2H(home, away);
+        const homeForm = footballData.getTeamForm(home);
+        const awayForm = footballData.getTeamForm(away);
+        
+        // Mock possession since it's not in the CSV, but we use real shots on target and cards
+        const homePossession = 45 + Math.random() * 10;
+        const awayPossession = 100 - homePossession;
+        
         const res = await fetch("https://api.bytez.com/models/v2/meta-llama/Meta-Llama-3-8B-Instruct", {
             method: "POST",
             headers: {
@@ -73,7 +99,10 @@ Provide your response in STRICTLY valid JSON format with three keys:
                     },
                     {
                         role: "user",
-                        content: `Match: ${home} vs ${away}. Weather: ${weather.temp}°C, Wind: ${weather.wind_speed}m/s. Odds: Home ${odds.avgH}, Draw ${odds.avgD}, Away ${odds.avgA}. Average Expected Goals: ${betstack.avgTotal.toFixed(2)}.`
+                        content: `Match: ${home} vs ${away}. Weather: ${weather.temp}°C, Wind: ${weather.wind_speed}m/s. Odds: Home ${odds.avgH}, Draw ${odds.avgD}, Away ${odds.avgA}. Average Expected Goals: ${betstack.avgTotal.toFixed(2)}. Recent Head-to-Head (last 5): ${home} Wins: ${h2h.homeWins}, ${away} Wins: ${h2h.awayWins}, Draws: ${h2h.draws}.
+Recent Form (Last 5 matches):
+${home}: Avg Possession: ${homePossession.toFixed(1)}%, Avg Shots on Target: ${homeForm.sot.toFixed(1)}, Yellow Cards: ${Math.round(homeForm.yc)}, Red Cards: ${Math.round(homeForm.rc)}.
+${away}: Avg Possession: ${awayPossession.toFixed(1)}%, Avg Shots on Target: ${awayForm.sot.toFixed(1)}, Yellow Cards: ${Math.round(awayForm.yc)}, Red Cards: ${Math.round(awayForm.rc)}.`
                     }
                 ]
             })
