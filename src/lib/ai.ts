@@ -53,8 +53,10 @@ async function loadHistoricalData(model: tf.Sequential) {
 
             const labels = data.map((r: any) => r.FTR === 'H' ? 0 : r.FTR === 'D' ? 1 : 2);
 
+            if (features.length === 0) continue;
+
             const xs = tf.tensor2d(features);
-            const ys = tf.tensor1d(labels, 'int32');
+            const ys = tf.tensor1d(labels, 'float32');
 
             await model.fit(xs, ys, {epochs: 6, shuffle: true});
             xs.dispose(); ys.dispose();

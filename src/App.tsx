@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Brain, CloudLightning, CheckCircle, Copy, UploadCloud } from 'lucide-react';
 import { recognizeText } from './lib/ocr';
-import { parseGamesFromText, calculateStake } from './lib/utils';
+import { calculateStake } from './lib/utils';
 import { getWeather, getRealOdds, getBetStackData, getBizzoPrediction, getGameForecast } from './lib/api';
 import { predictWithModel } from './lib/ai';
 import { motion, AnimatePresence } from 'motion/react';
@@ -30,7 +30,23 @@ export default function App() {
     const [predictions, setPredictions] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [toast, setToast] = useState<string | null>(null);
+    const [globalError, setGlobalError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const handleError = (e: ErrorEvent) => {
+            setGlobalError(e.message);
+        };
+        const handleRejection = (e: PromiseRejectionEvent) => {
+            setGlobalError(e.reason?.message || "Promise rejected");
+        };
+        window.addEventListener('error', handleError);
+        window.addEventListener('unhandledrejection', handleRejection);
+        return () => {
+            window.removeEventListener('error', handleError);
+            window.removeEventListener('unhandledrejection', handleRejection);
+        };
+    }, []);
 
     useEffect(() => {
         const b = localStorage.getItem('bankroll');
@@ -54,6 +70,7 @@ export default function App() {
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        e.target.value = '';
         await processFile(file);
     };
 
@@ -61,20 +78,23 @@ export default function App() {
         setIsLoading(true);
         showToast("Analyzing screenshot...");
         setPredictions([]);
+        setGlobalError(null);
 
         try {
-            const text = await recognizeText(file);
+            const games = await recognizeText(file);
+            
+            if (!games || games.length === 0) {
+                throw new Error("No matches found in image.");
+            }
+
             let league = 'soccer_epl';
-            const lower = text.toLowerCase();
+            const firstGameText = (games[0].home + " " + games[0].away).toLowerCase();
             for (let k in leagueMap) {
-                if (lower.includes(k)) {
+                if (firstGameText.includes(k)) {
                     league = leagueMap[k].oddsKey;
                     break;
                 }
             }
-
-            const games = parseGamesFromText(text);
-            if (games.length === 0) throw new Error("No matches found");
 
             const newPredictions = [];
             for (let game of games.slice(0, 10)) {
@@ -100,8 +120,8 @@ export default function App() {
                     weather.wind_speed > 20 ? 2 : weather.wind_speed > 10 ? 1 : 0,
                     Math.round(Math.random()*15 - 7.5), Math.round(Math.random()*15 - 7.5),
                     (1.4 + Math.random()*1.2) - (1.4 + Math.random()*1.2),
-                    lower.includes("injury") || lower.includes("injured") || lower.includes("miss") ? -0.5 : 0.2,
-                    lower.includes("win") || lower.includes("strong") || lower.includes("confident") ? 0.7 : lower.includes("lose") || lower.includes("weak") ? -0.7 : 0,
+                    (game.home + game.away).toLowerCase().includes("injury") ? -0.5 : 0.2,
+                    (game.home + game.away).toLowerCase().includes("win") ? 0.7 : 0,
                     Math.random(), Math.random(), Math.random(), Math.random()
                 ];
 
@@ -127,6 +147,7 @@ export default function App() {
             showToast("Analysis complete!");
         } catch (err: any) {
             showToast("Error: " + err.message);
+            setGlobalError(err.message);
             console.error(err);
         } finally {
             setIsLoading(false);
@@ -152,6 +173,12 @@ export default function App() {
     return (
         <div className="bg-gradient-to-br from-gray-950 to-black text-gray-100 min-h-screen font-sans">
             <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
+                {globalError && (
+                    <div className="bg-red-900/50 border border-red-500 text-red-200 p-4 rounded-xl mb-6">
+                        <strong>Error:</strong> {globalError}
+                    </div>
+                )}
+                
                 {/* HEADER */}
                 <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">
                     <div className="flex items-center gap-4">

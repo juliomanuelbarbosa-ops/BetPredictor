@@ -6,13 +6,17 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function parseGamesFromText(text: string) {
-    const lines = text.split('\n');
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     const games = [];
     
-    for (const line of lines) {
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
         const lower = line.toLowerCase();
-        if (lower.includes(' vs ') || lower.includes(' - ') || lower.includes(' v ')) {
-            const parts = line.split(/ vs | - | v /i);
+        
+        // Format 1: Team A vs Team B 2.1 3.4 3.2
+        if (lower.includes(' vs ') || lower.includes(' - ') || lower.includes(' v ') || lower.includes(' @ ')) {
+            const separator = lower.includes(' vs ') ? / vs /i : lower.includes(' - ') ? / - / : lower.includes(' v ') ? / v /i : / @ /;
+            const parts = line.split(separator);
             if (parts.length >= 2) {
                 const home = parts[0].trim();
                 const rest = parts[1].trim().split(/\s+/);
@@ -27,22 +31,28 @@ export function parseGamesFromText(text: string) {
                 }
                 
                 if (home && away && home.length > 2 && away.length > 2) {
-                    games.push({
-                        home,
-                        away,
-                        oddsH,
-                        oddsD,
-                        oddsA,
-                        time: "Upcoming"
-                    });
+                    games.push({ home, away, oddsH, oddsD, oddsA, time: "Upcoming" });
+                    continue;
                 }
             }
         }
-    }
-    
-    if (games.length === 0) {
-        games.push({ home: "Arsenal", away: "Chelsea", oddsH: 2.1, oddsD: 3.4, oddsA: 3.2, time: "20:00" });
-        games.push({ home: "Real Madrid", away: "Barcelona", oddsH: 2.5, oddsD: 3.5, oddsA: 2.6, time: "21:00" });
+        
+        // Format 2: 3 numbers on a line, previous lines are teams
+        const numbers = line.match(/\d+\.\d{2}/g);
+        if (numbers && numbers.length >= 3 && i >= 2) {
+            const home = lines[i-2].replace(/[\d\.]/g, '').trim();
+            const away = lines[i-1].replace(/[\d\.]/g, '').trim();
+            if (home.length > 2 && away.length > 2) {
+                games.push({
+                    home,
+                    away,
+                    oddsH: parseFloat(numbers[0]),
+                    oddsD: parseFloat(numbers[1]),
+                    oddsA: parseFloat(numbers[2]),
+                    time: "Upcoming"
+                });
+            }
+        }
     }
     
     return games;
