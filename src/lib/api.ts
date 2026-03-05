@@ -49,3 +49,36 @@ export async function getBizzoPrediction(home: string, away: string) {
 export async function getGameForecast() {
     return { home_prob: 40 + Math.random() * 20 };
 }
+
+const BYTEZ_API_KEY = import.meta.env.VITE_BYTEZ_API_KEY || "e6eb939af9210a143459fbdf38262663";
+
+export async function getBytezAnalysis(home: string, away: string): Promise<string> {
+    try {
+        const res = await fetch("https://api.bytez.com/models/v2/meta-llama/Meta-Llama-3-8B-Instruct", {
+            method: "POST",
+            headers: {
+                "Authorization": `Key ${BYTEZ_API_KEY}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                messages: [
+                    {
+                        role: "system",
+                        content: "You are a sports betting AI. Provide a single, punchy 1-sentence tactical insight or prediction for the given football match. Keep it under 15 words."
+                    },
+                    {
+                        role: "user",
+                        content: `${home} vs ${away}`
+                    }
+                ]
+            })
+        });
+        
+        if (!res.ok) throw new Error("Bytez API failed");
+        const data = await res.json();
+        return data.output?.content || "Neutral tactical matchup expected.";
+    } catch (e) {
+        console.error("Bytez error:", e);
+        return "Neutral tactical matchup expected.";
+    }
+}

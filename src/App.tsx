@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Brain, CloudLightning, CheckCircle, Copy, UploadCloud } from 'lucide-react';
 import { recognizeText } from './lib/ocr';
 import { calculateStake } from './lib/utils';
-import { getWeather, getRealOdds, getBetStackData, getBizzoPrediction, getGameForecast } from './lib/api';
+import { getWeather, getRealOdds, getBetStackData, getBizzoPrediction, getGameForecast, getBytezAnalysis } from './lib/api';
 import { predictWithModel } from './lib/ai';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -104,6 +104,7 @@ export default function App() {
                 const betstack = await getBetStackData(league);
                 const bizzo = await getBizzoPrediction(game.home, game.away);
                 const forecast = await getGameForecast();
+                const bytezAnalysis = await getBytezAnalysis(game.home, game.away);
 
                 const features = [
                     game.oddsH || 2.5, game.oddsD || 3.5, game.oddsA || 3.5,
@@ -139,7 +140,7 @@ export default function App() {
                 const stake = calculateStake(confidence, edge);
 
                 newPredictions.push({
-                    game, probs, bestBet, confidence, edge, valueText, predScore, stake, features, actual: null
+                    game, probs, bestBet, confidence, edge, valueText, predScore, stake, features, actual: null, bytezAnalysis
                 });
             }
 
@@ -262,36 +263,50 @@ export default function App() {
                             key={i} 
                             className="bg-gray-900 border border-gray-800 rounded-3xl p-6 hover:-translate-y-2 hover:shadow-[0_25px_40px_-10px_rgba(16,185,129,0.25)] transition-all duration-400"
                         >
-                            <div className="flex justify-between items-start">
+                            <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                                 <div>
                                     <h3 className="font-semibold text-xl">{pred.game.home} <span className="text-gray-500">vs</span> {pred.game.away}</h3>
-                                    <p className="text-emerald-400 text-sm">{pred.game.time || ''} • {pred.predScore}</p>
+                                    <p className="text-emerald-400 text-sm mt-1">{pred.game.time || 'Upcoming'} • Score: {pred.predScore}</p>
                                 </div>
-                                <div className="text-right">
-                                    <div className="text-3xl font-bold text-emerald-400">{pred.bestBet}</div>
-                                    <div className="text-xs text-emerald-500">{pred.confidence}%</div>
-                                    {pred.valueText && (
-                                        <div className="text-xs text-yellow-400 mt-1 animate-pulse">{pred.valueText}</div>
-                                    )}
+                                <div className="w-full sm:w-auto sm:text-right bg-emerald-900/20 px-4 py-3 rounded-2xl border border-emerald-500/20">
+                                    <div className="text-2xl font-bold text-emerald-400">{pred.bestBet}</div>
+                                    <div className="flex items-center sm:justify-end gap-2 mt-2">
+                                        <span className="text-xs text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-lg font-medium">{pred.confidence}% Conf</span>
+                                        {pred.valueText && (
+                                            <span className="text-xs text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded-lg font-medium animate-pulse">{pred.valueText}</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="mt-4 p-3 bg-gray-950/70 rounded-2xl text-sm">
-                                <strong>Notes:</strong> {pred.features[34] > 0.3 ? 'Positive fan vibe' : pred.features[34] < -0.3 ? 'Negative fan vibe' : 'Neutral'} • {pred.features[33] < -0.2 ? 'Possible injury impact' : 'No injury signal'}
-                            </div>
-
-                            <div className="mt-6 grid grid-cols-3 gap-4 text-xs">
-                                <div className="bg-gray-950 rounded-2xl p-3"><div className="text-gray-500">Home</div><div className="font-mono">{(pred.probs[0]*100).toFixed(0)}%</div></div>
-                                <div className="bg-gray-950 rounded-2xl p-3"><div className="text-gray-500">Draw</div><div className="font-mono">{(pred.probs[1]*100).toFixed(0)}%</div></div>
-                                <div className="bg-gray-950 rounded-2xl p-3"><div className="text-gray-500">Away</div><div className="font-mono">{(pred.probs[2]*100).toFixed(0)}%</div></div>
-                            </div>
-
-                            <div className="mt-4 flex justify-between items-center text-sm">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-gray-400">Stake</span>
-                                    <span className="font-mono font-bold text-emerald-400">${pred.stake}</span>
+                            <div className="mt-5 p-4 bg-gray-950/70 rounded-2xl text-sm border border-gray-800/50">
+                                <strong className="text-gray-400">AI Tactical Insight:</strong> <span className="text-gray-300 italic">"{pred.bytezAnalysis}"</span>
+                                <div className="mt-2 pt-2 border-t border-gray-800/50 text-xs">
+                                    <strong className="text-gray-500">Data Signals:</strong> <span className="text-gray-400">{pred.features[34] > 0.3 ? 'Positive fan vibe' : pred.features[34] < -0.3 ? 'Negative fan vibe' : 'Neutral atmosphere'} • {pred.features[33] < -0.2 ? 'Possible injury impact detected' : 'No major injury signals'}</span>
                                 </div>
-                                <button onClick={() => copyPrediction(pred)} className="text-xs bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-2xl flex items-center gap-2 transition-colors">
+                            </div>
+
+                            <div className="mt-5 grid grid-cols-3 gap-3 text-xs">
+                                <div className="bg-gray-950 rounded-2xl p-3 border border-gray-800/50 flex flex-col items-center justify-center">
+                                    <div className="text-gray-500 mb-1">Home</div>
+                                    <div className="font-mono text-lg text-gray-300">{(pred.probs[0]*100).toFixed(0)}%</div>
+                                </div>
+                                <div className="bg-gray-950 rounded-2xl p-3 border border-gray-800/50 flex flex-col items-center justify-center">
+                                    <div className="text-gray-500 mb-1">Draw</div>
+                                    <div className="font-mono text-lg text-gray-300">{(pred.probs[1]*100).toFixed(0)}%</div>
+                                </div>
+                                <div className="bg-gray-950 rounded-2xl p-3 border border-gray-800/50 flex flex-col items-center justify-center">
+                                    <div className="text-gray-500 mb-1">Away</div>
+                                    <div className="font-mono text-lg text-gray-300">{(pred.probs[2]*100).toFixed(0)}%</div>
+                                </div>
+                            </div>
+
+                            <div className="mt-6 flex justify-between items-center text-sm pt-4 border-t border-gray-800/50">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-gray-400 bg-gray-950 px-3 py-1.5 rounded-lg border border-gray-800">Suggested Stake</span>
+                                    <span className="font-mono font-bold text-emerald-400 text-lg">${pred.stake}</span>
+                                </div>
+                                <button onClick={() => copyPrediction(pred)} className="text-xs bg-gray-800 hover:bg-gray-700 px-4 py-2.5 rounded-xl flex items-center gap-2 transition-colors border border-gray-700">
                                     <Copy className="w-4 h-4" /> Copy
                                 </button>
                             </div>
