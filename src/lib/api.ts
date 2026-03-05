@@ -52,7 +52,7 @@ export async function getGameForecast() {
 
 const BYTEZ_API_KEY = import.meta.env.VITE_BYTEZ_API_KEY || "e6eb939af9210a143459fbdf38262663";
 
-export async function getBytezAnalysis(home: string, away: string): Promise<string> {
+export async function getBytezAnalysis(home: string, away: string, weather: any, odds: any, betstack: any): Promise<{ market: string, confidence: number, report: string }> {
     try {
         const res = await fetch("https://api.bytez.com/models/v2/meta-llama/Meta-Llama-3-8B-Instruct", {
             method: "POST",
@@ -64,11 +64,16 @@ export async function getBytezAnalysis(home: string, away: string): Promise<stri
                 messages: [
                     {
                         role: "system",
-                        content: "You are a sports betting AI. Provide a single, punchy 1-sentence tactical insight or prediction for the given football match. Keep it under 15 words."
+                        content: `You are an expert sports betting quantitative analyst. 
+Analyze the match and recommend the best betting market (e.g., 1X2, Over/Under 2.5 Goals, Both Teams to Score, Asian Handicap).
+Provide your response in STRICTLY valid JSON format with three keys:
+- "market": (string) The specific bet to place (e.g., "Over 2.5 Goals", "Home Win", "BTTS - Yes").
+- "confidence": (number) A confidence score from 1 to 100.
+- "report": (string) A serious, detailed 3-4 sentence explanation of why this market was chosen. Consider weather conditions, odds value, and tactical matchups. Do not include any markdown formatting or extra text outside the JSON.`
                     },
                     {
                         role: "user",
-                        content: `${home} vs ${away}`
+                        content: `Match: ${home} vs ${away}. Weather: ${weather.temp}°C, Wind: ${weather.wind_speed}m/s. Odds: Home ${odds.avgH}, Draw ${odds.avgD}, Away ${odds.avgA}. Average Expected Goals: ${betstack.avgTotal.toFixed(2)}.`
                     }
                 ]
             })
@@ -76,9 +81,22 @@ export async function getBytezAnalysis(home: string, away: string): Promise<stri
         
         if (!res.ok) throw new Error("Bytez API failed");
         const data = await res.json();
-        return data.output?.content || "Neutral tactical matchup expected.";
+        const content = data.output?.content || "{}";
+        
+        let jsonStr = content.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(jsonStr);
+        
+        return {
+            market: parsed.market || "1X2",
+            confidence: parsed.confidence || 50,
+            report: parsed.report || "Neutral tactical matchup expected."
+        };
     } catch (e) {
         console.error("Bytez error:", e);
-        return "Neutral tactical matchup expected.";
+        return {
+            market: "1X2",
+            confidence: 50,
+            report: "Neutral tactical matchup expected. Data insufficient for deep analysis."
+        };
     }
 }

@@ -4,6 +4,7 @@ import { recognizeText } from './lib/ocr';
 import { calculateStake } from './lib/utils';
 import { getWeather, getRealOdds, getBetStackData, getBizzoPrediction, getGameForecast, getBytezAnalysis } from './lib/api';
 import { predictWithModel } from './lib/ai';
+import { footballData } from './lib/data';
 import { motion, AnimatePresence } from 'motion/react';
 
 const leagueMap: Record<string, { oddsKey: string }> = {
@@ -29,6 +30,8 @@ export default function App() {
     const [totalGames, setTotalGames] = useState(0);
     const [predictions, setPredictions] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [loadingStep, setLoadingStep] = useState<string>("");
+    const [isDragging, setIsDragging] = useState(false);
     const [toast, setToast] = useState<string | null>(null);
     const [globalError, setGlobalError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -76,7 +79,7 @@ export default function App() {
 
     const processFile = async (file: File) => {
         setIsLoading(true);
-        showToast("Analyzing screenshot...");
+        setLoadingStep("Extracting matches from screenshot...");
         setPredictions([]);
         setGlobalError(null);
 
@@ -97,33 +100,42 @@ export default function App() {
             }
 
             const newPredictions = [];
-            for (let game of games.slice(0, 10)) {
+            
+            // Ensure historical data is loaded before processing
+            setLoadingStep("Loading historical data and team form...");
+            await footballData.loadData();
+
+            setLoadingStep("Training AI model with latest data...");
+            await createAndTrainModel();
+
+            for (let i = 0; i < games.slice(0, 10).length; i++) {
+                const game = games[i];
+                setLoadingStep(`Analyzing match ${i + 1} of ${Math.min(games.length, 10)}: ${game.home} vs ${game.away}...`);
                 const city = cityMap[game.home] || "London";
                 const weather = await getWeather(city);
                 const odds = await getRealOdds(game.home, game.away, league);
                 const betstack = await getBetStackData(league);
                 const bizzo = await getBizzoPrediction(game.home, game.away);
                 const forecast = await getGameForecast();
-                const bytezAnalysis = await getBytezAnalysis(game.home, game.away);
+                
+                setLoadingStep(`Generating tactical insight for ${game.home} vs ${game.away}...`);
+                const bytezAnalysis = await getBytezAnalysis(game.home, game.away, weather, odds, betstack);
+
+                // Fetch real historical form and H2H data
+                const homeForm = footballData.getTeamForm(game.home);
+                const awayForm = footballData.getTeamForm(game.away);
+                const h2h = footballData.getH2H(game.home, game.away);
 
                 const features = [
-                    game.oddsH || 2.5, game.oddsD || 3.5, game.oddsA || 3.5,
-                    weather.temp, weather.humidity, weather.wind_speed,
-                    forecast.home_prob || 50, odds.avgH || 2.5,
-                    betstack.avgTotal || 2.5, bizzo.homeWinProb || 50,
-                    1.4 + Math.random()*1.2, 1.2 + Math.random()*1.2,
-                    1.3 + Math.random()*1.2, 1.4 + Math.random()*1.2,
-                    Math.round(6 + Math.random()*8), Math.round(5 + Math.random()*8),
-                    Math.round(Math.random()*4), Math.round(Math.random()*4),
-                    Math.round(Math.random()*6 - 3), Math.round(40 + Math.random()*40),
-                    2.2 + Math.random()*2, 3.8 + Math.random()*1.5, 0.08 + Math.random()*0.15,
-                    weather.rain > 0 ? 1 : 0, weather.temp < 5 ? 0 : weather.temp > 28 ? 2 : 1,
-                    weather.wind_speed > 20 ? 2 : weather.wind_speed > 10 ? 1 : 0,
-                    Math.round(Math.random()*15 - 7.5), Math.round(Math.random()*15 - 7.5),
-                    (1.4 + Math.random()*1.2) - (1.4 + Math.random()*1.2),
-                    (game.home + game.away).toLowerCase().includes("injury") ? -0.5 : 0.2,
-                    (game.home + game.away).toLowerCase().includes("win") ? 0.7 : 0,
-                    Math.random(), Math.random(), Math.random(), Math.random()
+                    game.oddsH || odds.avgH || 2.5, 
+                    game.oddsD || odds.avgD || 3.5, 
+                    game.oddsA || odds.avgA || 3.5,
+                    homeForm.pts, awayForm.pts,
+                    homeForm.gs, awayForm.gs,
+                    homeForm.gc, awayForm.gc,
+                    homeForm.sot, awayForm.sot,
+                    h2h.homeWins, h2h.awayWins, h2h.draws,
+                    1 // Home advantage
                 ];
 
                 const probs = await predictWithModel(features);
@@ -167,6 +179,24 @@ export default function App() {
         setTotalGames(0);
         setPredictions([]);
         showToast("History cleared!");
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = async (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const file = e.dataTransfer.files?.[0];
+        if (!file) return;
+        await processFile(file);
     };
 
     const successRate = totalGames > 0 ? Math.round((totalCorrect / totalGames) * 100) : 0;
@@ -222,12 +252,30 @@ export default function App() {
                 <section className="bg-gradient-to-br from-gray-900 to-gray-950 border border-gray-800/50 rounded-3xl p-6 sm:p-10 mb-10 shadow-2xl">
                     <div className="flex flex-col items-center gap-6">
                         <div 
-                            onClick={() => fileInputRef.current?.click()}
-                            className="w-full max-w-2xl h-56 border-4 border-dashed border-gray-700/70 rounded-3xl flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-950/10 transition-all duration-300"
+                            onClick={() => !isLoading && fileInputRef.current?.click()}
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                            onDrop={handleDrop}
+                            className={`w-full max-w-2xl h-56 border-4 border-dashed rounded-3xl flex flex-col items-center justify-center transition-all duration-300 ${
+                                isDragging 
+                                    ? 'border-emerald-500 bg-emerald-950/20 scale-[1.02]' 
+                                    : isLoading 
+                                        ? 'border-emerald-500/30 bg-gray-900/50 cursor-wait' 
+                                        : 'border-gray-700/70 cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-950/10'
+                            }`}
                         >
-                            <UploadCloud className="w-16 h-16 mb-4 text-gray-500/70" />
-                            <p className="text-xl text-gray-300 font-medium">Drop betting screenshot here</p>
-                            <p className="text-sm text-gray-500 mt-2">or click to select file • max 10 matches</p>
+                            {isLoading ? (
+                                <div className="flex flex-col items-center">
+                                    <div className="w-16 h-16 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mb-4"></div>
+                                    <p className="text-xl text-emerald-400 font-medium animate-pulse">{loadingStep}</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <UploadCloud className={`w-16 h-16 mb-4 transition-colors ${isDragging ? 'text-emerald-400' : 'text-gray-500/70'}`} />
+                                    <p className="text-xl text-gray-300 font-medium">{isDragging ? 'Drop it like it\'s hot!' : 'Drop betting screenshot here'}</p>
+                                    <p className="text-sm text-gray-500 mt-2">or click to select file • max 10 matches</p>
+                                </>
+                            )}
                         </div>
                         <input
                             type="file"
@@ -235,13 +283,19 @@ export default function App() {
                             accept="image/*"
                             className="hidden"
                             onChange={handleFileChange}
+                            disabled={isLoading}
                         />
                         <button 
                             onClick={() => fileInputRef.current?.click()}
-                            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-10 sm:px-14 py-5 rounded-3xl font-bold text-lg shadow-xl flex items-center gap-3 transition-all"
+                            disabled={isLoading}
+                            className={`px-10 sm:px-14 py-5 rounded-3xl font-bold text-lg shadow-xl flex items-center gap-3 transition-all ${
+                                isLoading 
+                                    ? 'bg-gray-800 text-gray-500 cursor-not-allowed' 
+                                    : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500'
+                            }`}
                         >
                             <CloudLightning className="w-6 h-6" />
-                            ANALYZE & PREDICT
+                            {isLoading ? 'ANALYZING...' : 'ANALYZE & PREDICT'}
                         </button>
                     </div>
                 </section>
@@ -269,9 +323,9 @@ export default function App() {
                                     <p className="text-emerald-400 text-sm mt-1">{pred.game.time || 'Upcoming'} • Score: {pred.predScore}</p>
                                 </div>
                                 <div className="w-full sm:w-auto sm:text-right bg-emerald-900/20 px-4 py-3 rounded-2xl border border-emerald-500/20">
-                                    <div className="text-2xl font-bold text-emerald-400">{pred.bestBet}</div>
+                                    <div className="text-2xl font-bold text-emerald-400">{pred.bytezAnalysis.market}</div>
                                     <div className="flex items-center sm:justify-end gap-2 mt-2">
-                                        <span className="text-xs text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-lg font-medium">{pred.confidence}% Conf</span>
+                                        <span className="text-xs text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-lg font-medium">{pred.bytezAnalysis.confidence}% Conf</span>
                                         {pred.valueText && (
                                             <span className="text-xs text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded-lg font-medium animate-pulse">{pred.valueText}</span>
                                         )}
@@ -280,24 +334,31 @@ export default function App() {
                             </div>
 
                             <div className="mt-5 p-4 bg-gray-950/70 rounded-2xl text-sm border border-gray-800/50">
-                                <strong className="text-gray-400">AI Tactical Insight:</strong> <span className="text-gray-300 italic">"{pred.bytezAnalysis}"</span>
+                                <strong className="text-gray-400">AI Tactical Insight:</strong> <span className="text-gray-300 italic">"{pred.bytezAnalysis.report}"</span>
                                 <div className="mt-2 pt-2 border-t border-gray-800/50 text-xs">
-                                    <strong className="text-gray-500">Data Signals:</strong> <span className="text-gray-400">{pred.features[34] > 0.3 ? 'Positive fan vibe' : pred.features[34] < -0.3 ? 'Negative fan vibe' : 'Neutral atmosphere'} • {pred.features[33] < -0.2 ? 'Possible injury impact detected' : 'No major injury signals'}</span>
+                                    <strong className="text-gray-500">Data Signals:</strong> <span className="text-gray-400">
+                                        Form: {pred.features[3]}pts vs {pred.features[4]}pts • 
+                                        xG (Last 5): {pred.features[5]} vs {pred.features[6]} • 
+                                        H2H: {pred.features[11]}W-{pred.features[13]}D-{pred.features[12]}L
+                                    </span>
                                 </div>
                             </div>
 
                             <div className="mt-5 grid grid-cols-3 gap-3 text-xs">
-                                <div className="bg-gray-950 rounded-2xl p-3 border border-gray-800/50 flex flex-col items-center justify-center">
-                                    <div className="text-gray-500 mb-1">Home</div>
-                                    <div className="font-mono text-lg text-gray-300">{(pred.probs[0]*100).toFixed(0)}%</div>
+                                <div className="bg-gray-950 rounded-2xl p-3 border border-gray-800/50 flex flex-col items-center justify-center relative overflow-hidden">
+                                    <div className="absolute bottom-0 left-0 right-0 bg-emerald-500/20" style={{height: `${pred.probs[0]*100}%`}}></div>
+                                    <div className="text-gray-500 mb-1 relative z-10">Home</div>
+                                    <div className="font-mono text-lg text-gray-300 relative z-10">{(pred.probs[0]*100).toFixed(0)}%</div>
                                 </div>
-                                <div className="bg-gray-950 rounded-2xl p-3 border border-gray-800/50 flex flex-col items-center justify-center">
-                                    <div className="text-gray-500 mb-1">Draw</div>
-                                    <div className="font-mono text-lg text-gray-300">{(pred.probs[1]*100).toFixed(0)}%</div>
+                                <div className="bg-gray-950 rounded-2xl p-3 border border-gray-800/50 flex flex-col items-center justify-center relative overflow-hidden">
+                                    <div className="absolute bottom-0 left-0 right-0 bg-gray-500/20" style={{height: `${pred.probs[1]*100}%`}}></div>
+                                    <div className="text-gray-500 mb-1 relative z-10">Draw</div>
+                                    <div className="font-mono text-lg text-gray-300 relative z-10">{(pred.probs[1]*100).toFixed(0)}%</div>
                                 </div>
-                                <div className="bg-gray-950 rounded-2xl p-3 border border-gray-800/50 flex flex-col items-center justify-center">
-                                    <div className="text-gray-500 mb-1">Away</div>
-                                    <div className="font-mono text-lg text-gray-300">{(pred.probs[2]*100).toFixed(0)}%</div>
+                                <div className="bg-gray-950 rounded-2xl p-3 border border-gray-800/50 flex flex-col items-center justify-center relative overflow-hidden">
+                                    <div className="absolute bottom-0 left-0 right-0 bg-emerald-500/20" style={{height: `${pred.probs[2]*100}%`}}></div>
+                                    <div className="text-gray-500 mb-1 relative z-10">Away</div>
+                                    <div className="font-mono text-lg text-gray-300 relative z-10">{(pred.probs[2]*100).toFixed(0)}%</div>
                                 </div>
                             </div>
 
@@ -327,38 +388,38 @@ export default function App() {
                                     <div key={i} className="flex items-center justify-between bg-gray-900 p-4 rounded-2xl border border-gray-800">
                                         <div>
                                             <div className="font-semibold">{pred.game.home} vs {pred.game.away}</div>
-                                            <div className="text-xs text-gray-400">Predicted: {pred.bestBet}</div>
+                                            <div className="text-xs text-gray-400">Predicted: {pred.bytezAnalysis.market}</div>
                                         </div>
                                         <div className="flex gap-2">
                                             <button 
                                                 onClick={() => {
                                                     const newPreds = [...predictions];
-                                                    newPreds[i].actual = newPreds[i].actual === 'HOME WIN' ? null : 'HOME WIN';
+                                                    newPreds[i].actual = newPreds[i].actual === 'WIN' ? null : 'WIN';
                                                     setPredictions(newPreds);
                                                 }}
-                                                className={`px-3 py-1 text-xs rounded-xl border ${pred.actual === 'HOME WIN' ? 'bg-emerald-600 border-emerald-500' : 'border-gray-700 hover:bg-gray-800'}`}
+                                                className={`px-3 py-1 text-xs font-bold rounded-xl border transition-colors ${pred.actual === 'WIN' ? 'bg-emerald-600 border-emerald-500 text-white' : 'border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-gray-200'}`}
                                             >
-                                                HOME
+                                                WIN
                                             </button>
                                             <button 
                                                 onClick={() => {
                                                     const newPreds = [...predictions];
-                                                    newPreds[i].actual = newPreds[i].actual === 'DRAW' ? null : 'DRAW';
+                                                    newPreds[i].actual = newPreds[i].actual === 'LOSS' ? null : 'LOSS';
                                                     setPredictions(newPreds);
                                                 }}
-                                                className={`px-3 py-1 text-xs rounded-xl border ${pred.actual === 'DRAW' ? 'bg-emerald-600 border-emerald-500' : 'border-gray-700 hover:bg-gray-800'}`}
+                                                className={`px-3 py-1 text-xs font-bold rounded-xl border transition-colors ${pred.actual === 'LOSS' ? 'bg-red-600 border-red-500 text-white' : 'border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-gray-200'}`}
                                             >
-                                                DRAW
+                                                LOSS
                                             </button>
                                             <button 
                                                 onClick={() => {
                                                     const newPreds = [...predictions];
-                                                    newPreds[i].actual = newPreds[i].actual === 'AWAY WIN' ? null : 'AWAY WIN';
+                                                    newPreds[i].actual = newPreds[i].actual === 'VOID' ? null : 'VOID';
                                                     setPredictions(newPreds);
                                                 }}
-                                                className={`px-3 py-1 text-xs rounded-xl border ${pred.actual === 'AWAY WIN' ? 'bg-emerald-600 border-emerald-500' : 'border-gray-700 hover:bg-gray-800'}`}
+                                                className={`px-3 py-1 text-xs font-bold rounded-xl border transition-colors ${pred.actual === 'VOID' ? 'bg-gray-600 border-gray-500 text-white' : 'border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-gray-200'}`}
                                             >
-                                                AWAY
+                                                VOID
                                             </button>
                                         </div>
                                     </div>
@@ -370,18 +431,20 @@ export default function App() {
                                     let total = 0;
                                     predictions.forEach(p => {
                                         if (p.actual) {
-                                            total++;
-                                            if (p.actual === p.bestBet) correct++;
+                                            if (p.actual !== 'VOID') {
+                                                total++;
+                                                if (p.actual === 'WIN') correct++;
+                                            }
                                         }
                                     });
-                                    if (total > 0) {
+                                    if (total > 0 || predictions.some(p => p.actual === 'VOID')) {
                                         const newTotalCorrect = totalCorrect + correct;
                                         const newTotalGames = totalGames + total;
                                         setTotalCorrect(newTotalCorrect);
                                         setTotalGames(newTotalGames);
                                         localStorage.setItem('totalCorrect', newTotalCorrect.toString());
                                         localStorage.setItem('totalGames', newTotalGames.toString());
-                                        showToast(`Saved ${total} results! Model updated.`);
+                                        showToast(`Saved results! Model updated.`);
                                         setPredictions([]);
                                     } else {
                                         showToast("Select actual results first.");
