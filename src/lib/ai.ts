@@ -3,7 +3,7 @@ import { footballData } from './data';
 
 let ensembleModels: tf.Sequential[] = [];
 
-// Feature vector size: 21
+// Feature vector size: 29
 // 0: Odds H, 1: Odds D, 2: Odds A
 // 3: Home Form Pts, 4: Away Form Pts
 // 5: Home GS, 6: Away GS
@@ -17,12 +17,16 @@ let ensembleModels: tf.Sequential[] = [];
 // 18: Away Key Player Form
 // 19: Away Injury Impact
 // 20: Away Discipline Impact
+// 21: Home xG, 22: Away xG
+// 23: Home PPDA, 24: Away PPDA
+// 25: Home Field Tilt, 26: Away Field Tilt
+// 27: Home CS Prob, 28: Away CS Prob
 
 function createBaseModel() {
     const model = tf.sequential();
     
     // Deeper, more robust architecture for tabular data
-    model.add(tf.layers.dense({units: 128, inputShape: [21], activation: 'relu', kernelRegularizer: tf.regularizers.l2({l2: 0.01})}));
+    model.add(tf.layers.dense({units: 128, inputShape: [29], activation: 'relu', kernelRegularizer: tf.regularizers.l2({l2: 0.01})}));
     model.add(tf.layers.batchNormalization());
     model.add(tf.layers.dropout({rate: 0.3}));
     
@@ -91,7 +95,16 @@ async function loadHistoricalData(models: tf.Sequential[], onProgress?: (msg: st
             Math.random() * 2, // Home Discipline Impact
             5 + Math.random() * 4, // Away Key Player Form
             Math.random() * 4, // Away Injury Impact
-            Math.random() * 2 // Away Discipline Impact
+            Math.random() * 2, // Away Discipline Impact
+            // Mock advanced metrics
+            1.0 + Math.random() * 1.5, // Home xG
+            1.0 + Math.random() * 1.5, // Away xG
+            8 + Math.random() * 10, // Home PPDA
+            8 + Math.random() * 10, // Away PPDA
+            40 + Math.random() * 20, // Home Field Tilt
+            40 + Math.random() * 20, // Away Field Tilt
+            10 + Math.random() * 40, // Home CS Prob
+            10 + Math.random() * 40 // Away CS Prob
         ];
         
         features.push(row);

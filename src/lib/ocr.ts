@@ -25,7 +25,7 @@ export async function recognizeText(file: File): Promise<any[]> {
                         },
                     },
                     {
-                        text: "Extract all the football/soccer matches and their betting odds (1X2 or Home/Draw/Away) from this image. Return a JSON array of objects with keys: home (string), away (string), oddsH (number), oddsD (number), oddsA (number), time (string). If you can't find odds, estimate them based on the teams. If you can't find any matches, return an empty array.",
+                        text: "Extract all the football/soccer matches and their betting odds (1X2 or Home/Draw/Away) from this image. Return a JSON array of objects with keys: home (string), away (string), oddsH (number), oddsD (number), oddsA (number), time (string). If you can't find odds, estimate them based on the teams. If you can't find any matches, return an empty array. Ensure the team names are standard English names (e.g., 'Manchester United' instead of 'Man Utd').",
                     },
                 ],
             },

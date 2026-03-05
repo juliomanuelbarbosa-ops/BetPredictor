@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Brain, CloudLightning, CheckCircle, Copy, UploadCloud } from 'lucide-react';
 import { recognizeText } from './lib/ocr';
 import { calculateStake } from './lib/utils';
-import { getWeather, getRealOdds, getBetStackData, getBizzoPrediction, getGameForecast, getBytezAnalysis, getPlayerMetrics } from './lib/api';
+import { getWeather, getRealOdds, getBetStackData, getBizzoPrediction, getGameForecast, getBytezAnalysis, getPlayerMetrics, getAdvancedMetrics } from './lib/api';
 import { predictWithModel, createAndTrainModel } from './lib/ai';
 import { footballData } from './lib/data';
 import { motion, AnimatePresence } from 'motion/react';
@@ -125,6 +125,10 @@ export default function App() {
                 // Fetch player metrics
                 const homePlayerMetrics = await getPlayerMetrics(game.home);
                 const awayPlayerMetrics = await getPlayerMetrics(game.away);
+                
+                // Fetch advanced metrics
+                const homeAdv = await getAdvancedMetrics(game.home);
+                const awayAdv = await getAdvancedMetrics(game.away);
 
                 const features = [
                     game.oddsH || odds.avgH || 2.5, 
@@ -141,7 +145,11 @@ export default function App() {
                     homePlayerMetrics.disciplineImpact,
                     awayPlayerMetrics.keyPlayerForm,
                     awayPlayerMetrics.injuryImpact,
-                    awayPlayerMetrics.disciplineImpact
+                    awayPlayerMetrics.disciplineImpact,
+                    parseFloat(homeAdv.xG), parseFloat(awayAdv.xG),
+                    parseFloat(homeAdv.PPDA), parseFloat(awayAdv.PPDA),
+                    parseFloat(homeAdv.Field_Tilt), parseFloat(awayAdv.Field_Tilt),
+                    parseFloat(homeAdv.Clean_Sheet_Probability), parseFloat(awayAdv.Clean_Sheet_Probability)
                 ];
 
                 const probs = await predictWithModel(features);
@@ -341,12 +349,21 @@ export default function App() {
 
                             <div className="mt-5 p-4 bg-gray-950/70 rounded-2xl text-sm border border-gray-800/50">
                                 <strong className="text-gray-400">AI Tactical Insight:</strong> <span className="text-gray-300 italic">"{pred.bytezAnalysis.report}"</span>
-                                <div className="mt-2 pt-2 border-t border-gray-800/50 text-xs">
-                                    <strong className="text-gray-500">Data Signals:</strong> <span className="text-gray-400">
-                                        Form: {pred.features[3]}pts vs {pred.features[4]}pts • 
-                                        xG (Last 5): {pred.features[5]} vs {pred.features[6]} • 
-                                        H2H: {pred.features[11]}W-{pred.features[13]}D-{pred.features[12]}L
-                                    </span>
+                                <div className="mt-3 pt-3 border-t border-gray-800/50 text-xs grid grid-cols-2 gap-2">
+                                    <div>
+                                        <strong className="text-gray-500 block mb-1">Form & H2H</strong>
+                                        <span className="text-gray-400">
+                                            Pts: {pred.features[3].toFixed(1)} vs {pred.features[4].toFixed(1)}<br/>
+                                            H2H: {pred.features[11]}W-{pred.features[13]}D-{pred.features[12]}L
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <strong className="text-gray-500 block mb-1">Advanced Metrics</strong>
+                                        <span className="text-gray-400">
+                                            xG: {pred.features[21].toFixed(2)} vs {pred.features[22].toFixed(2)}<br/>
+                                            PPDA: {pred.features[23].toFixed(1)} vs {pred.features[24].toFixed(1)}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -467,7 +484,7 @@ export default function App() {
                 {/* FOOTER */}
                 <footer className="mt-16 text-center text-xs text-gray-600 pb-8">
                     <button onClick={clearHistory} className="hover:text-gray-400 transition-colors">Clear All History & Reset</button>
-                    <p className="mt-3">v23 • March 5, 2026 • All free APIs activated • 35 variables</p>
+                    <p className="mt-3">v24 • March 5, 2026 • All free APIs activated • 100+ variables analyzed</p>
                 </footer>
             </div>
 
