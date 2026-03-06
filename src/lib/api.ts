@@ -152,7 +152,7 @@ Provide your response in STRICTLY valid JSON format with four keys:
 - "category": (string) The category of the market from the list above (e.g., "Goals", "Player Props", "Special & Combo").
 - "market": (string) The specific bet to place from the list above (e.g., "Over 2.5 Goals", "Home Win & BTTS", "Player to have 2+ Shots on Target").
 - "confidence": (number) A confidence score from 1 to 100.
-- "report": (string) A serious, detailed 3-4 sentence explanation of why this market was chosen. Consider weather conditions, odds value, and tactical matchups. Do not include any markdown formatting or extra text outside the JSON.`
+- "report": (string) A serious, detailed 3-4 sentence explanation of why this market was chosen. Consider weather conditions, odds value, and tactical matchups. If recommending a Player Prop (like Anytime Goalscorer or 2+ Shots on Target), explicitly justify it based on the team's attacking tactics (e.g., high xG, Big Chances Created) and defensive vulnerabilities of the opponent. Do not include any markdown formatting or extra text outside the JSON.`
                     },
                     {
                         role: "user",
