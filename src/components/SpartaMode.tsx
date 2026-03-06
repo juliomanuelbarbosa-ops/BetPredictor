@@ -41,22 +41,23 @@ export function SpartaMode({
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     return (
-        <section className="glass-card rounded-3xl p-6 sm:p-10 mb-10">
-            <div className="flex flex-col items-center gap-8">
+        <section className="glass-card rounded-[2rem] p-8 sm:p-12 mb-12 relative z-10">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent"></div>
+            <div className="flex flex-col items-center gap-10">
                 {/* STRATOS PHASE */}
-                <div className="w-full max-w-2xl">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
-                            <span className="text-emerald-400 font-mono font-bold">1</span>
+                <div className="w-full max-w-3xl">
+                    <div className="flex items-center gap-4 mb-8">
+                        <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                            <span className="text-emerald-400 font-mono font-bold text-lg">1</span>
                         </div>
-                        <h2 className="text-2xl font-bold text-white tracking-tight">Phase 1: Stratos <span className="text-gray-500 font-mono text-sm ml-2">(T-24h)</span></h2>
+                        <h2 className="text-3xl font-extrabold text-white tracking-tight">Phase 1: Stratos <span className="text-emerald-500/60 font-mono text-sm ml-3 tracking-widest uppercase">T-24h</span></h2>
                     </div>
                     
-                    <div className="flex flex-col sm:flex-row gap-4 mb-8">
+                    <div className="flex flex-col sm:flex-row gap-4 mb-10">
                         <input 
                             type="text" 
                             placeholder="Enter Match (e.g., Arsenal vs Chelsea)" 
-                            className="flex-1 bg-black/50 border border-gray-800 rounded-xl px-5 py-3.5 text-white focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono text-sm"
+                            className="flex-1 bg-black/60 border border-white/10 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 transition-all font-mono text-sm shadow-inner"
                             value={matchInput}
                             onChange={(e) => setMatchInput(e.target.value)}
                             disabled={isLoading || phase === 'COMBAT'}
@@ -64,7 +65,7 @@ export function SpartaMode({
                         <button 
                             onClick={initializeStratos}
                             disabled={isLoading || phase === 'COMBAT'}
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-3.5 rounded-xl font-bold tracking-wide transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)]"
+                            className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white px-10 py-4 rounded-2xl font-bold tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] transform hover:-translate-y-0.5"
                         >
                             INIT MATRIX
                         </button>
@@ -143,37 +144,38 @@ export function SpartaMode({
 
                 {/* COMBAT PHASE */}
                 {spartaMatrix && (
-                    <div className="w-full max-w-2xl border-t border-white/10 pt-10 mt-2 animate-in fade-in duration-700">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
-                                <span className="text-emerald-400 font-mono font-bold">2</span>
+                    <div className="w-full max-w-3xl border-t border-white/10 pt-12 mt-4 animate-in fade-in duration-700">
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                                <span className="text-emerald-400 font-mono font-bold text-lg">2</span>
                             </div>
-                            <h2 className="text-2xl font-bold text-white tracking-tight">Phase 2: Combat <span className="text-gray-500 font-mono text-sm ml-2">(T-60m)</span></h2>
+                            <h2 className="text-3xl font-extrabold text-white tracking-tight">Phase 2: Combat <span className="text-emerald-500/60 font-mono text-sm ml-3 tracking-widest uppercase">T-60m</span></h2>
                         </div>
-                        <p className="text-gray-400 mb-6 text-sm">Upload a SofaScore or FlashScore lineup screenshot to extract Starting XI and apply FM Penalty Logic.</p>
+                        <p className="text-gray-400 mb-8 text-sm leading-relaxed">Upload a SofaScore or FlashScore lineup screenshot to extract Starting XI and apply FM Penalty Logic.</p>
                         
                         <div 
                             onClick={() => !isLoading && fileInputRef.current?.click()}
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}
                             onDrop={handleDrop}
-                            className={`w-full h-56 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center transition-all duration-300 ${
+                            className={`w-full h-64 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center transition-all duration-500 ${
                                 isDragging 
-                                    ? 'border-emerald-500 bg-emerald-500/10 scale-[1.02]' 
+                                    ? 'border-emerald-400 bg-emerald-500/10 scale-[1.02] shadow-[0_0_30px_rgba(16,185,129,0.2)]' 
                                     : isLoading 
-                                        ? 'border-emerald-500/30 bg-black/40 cursor-wait' 
-                                        : 'border-gray-700 cursor-pointer hover:border-emerald-500/50 hover:bg-white/5'
+                                        ? 'border-emerald-500/20 bg-black/60 cursor-wait' 
+                                        : 'border-white/10 cursor-pointer hover:border-emerald-500/40 hover:bg-white/5'
                             }`}
                         >
                             {isLoading ? (
                                 <div className="flex flex-col items-center">
-                                    <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mb-4"></div>
-                                    <p className="text-lg text-emerald-400 font-medium animate-pulse">{loadingStep}</p>
+                                    <div className="w-14 h-14 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mb-6"></div>
+                                    <p className="text-lg text-emerald-400 font-mono tracking-widest uppercase animate-pulse">{loadingStep}</p>
                                 </div>
                             ) : (
                                 <>
-                                    <UploadCloud className={`w-12 h-12 mb-4 transition-colors ${isDragging ? 'text-emerald-400' : 'text-gray-500/70'}`} />
-                                    <p className="text-lg text-gray-300 font-medium">{isDragging ? 'Drop lineup here!' : 'Drop lineup screenshot here'}</p>
+                                    <UploadCloud className={`w-14 h-14 mb-6 transition-colors duration-500 ${isDragging ? 'text-emerald-400 scale-110' : 'text-gray-500/70'}`} />
+                                    <p className="text-xl text-gray-300 font-medium tracking-tight mb-2">{isDragging ? 'Drop lineup here!' : 'Drop lineup screenshot here'}</p>
+                                    <p className="text-gray-500 font-mono text-sm">or click to browse</p>
                                 </>
                             )}
                         </div>

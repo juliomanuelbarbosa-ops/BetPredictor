@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Stratos AI</string>
-    <string name="title_activity_main">Stratos AI</string>
-    <string name="package_name">com.stratos.ai</string>
-    <string name="custom_url_scheme">com.stratos.ai</string>
+    <string name="app_name">Sparta</string>
+    <string name="title_activity_main">Sparta</string>
+    <string name="package_name">com.sparta.app</string>
+    <string name="custom_url_scheme">com.sparta.app</string>
 </resources>

@@ -190,9 +190,9 @@ export default function App() {
             // Ensure historical data is loaded before processing
             await createAndTrainModel((msg) => setLoadingStep(msg));
 
-            for (let i = 0; i < games.slice(0, 10).length; i++) {
+            for (let i = 0; i < games.length; i++) {
                 const game = games[i];
-                setLoadingStep(`Analyzing match ${i + 1} of ${Math.min(games.length, 10)}: ${game.home} vs ${game.away}...`);
+                setLoadingStep(`Analyzing match ${i + 1} of ${games.length}: ${game.home} vs ${game.away}...`);
                 const city = cityMap[game.home] || "London";
                 const weather = await getWeather(city);
                 const odds = await getRealOdds(game.home, game.away, league);
@@ -307,72 +307,86 @@ export default function App() {
     const successRate = totalGames > 0 ? Math.round((totalCorrect / totalGames) * 100) : 0;
 
     return (
-        <div className="bg-[#0a0a0a] text-gray-100 min-h-screen font-sans selection:bg-emerald-500/30">
+        <div className="bg-transparent text-gray-100 min-h-screen font-sans selection:bg-emerald-500/30 relative z-10">
             <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
                 {globalError && (
-                    <div className="bg-red-900/50 border border-red-500/50 text-red-200 p-4 rounded-xl mb-6 backdrop-blur-sm">
-                        <strong className="font-mono">ERROR:</strong> {globalError}
-                    </div>
+                    <motion.div 
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-red-950/80 border border-red-500/50 text-red-200 p-4 rounded-2xl mb-8 backdrop-blur-md shadow-[0_0_30px_rgba(239,68,68,0.15)] flex items-center gap-3"
+                    >
+                        <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                            <span className="text-red-400 font-bold">!</span>
+                        </div>
+                        <div>
+                            <strong className="font-mono text-sm tracking-wider uppercase text-red-400 block mb-0.5">System Error</strong>
+                            <span className="text-sm">{globalError}</span>
+                        </div>
+                    </motion.div>
                 )}
                 
                 {/* HEADER */}
-                <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 glass-panel rounded-3xl p-6 sm:p-8">
-                    <div className="flex items-center gap-5">
-                        <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-emerald-900 rounded-2xl flex items-center justify-center text-2xl font-black shadow-[0_0_30px_rgba(16,185,129,0.2)] border border-emerald-400/20">
-                            <Brain className="w-7 h-7 text-white" />
+                <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12 glass-panel rounded-3xl p-8 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+                    
+                    <div className="flex items-center gap-6 relative z-10">
+                        <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-emerald-900 rounded-2xl flex items-center justify-center text-2xl font-black shadow-[0_0_40px_rgba(16,185,129,0.3)] border border-emerald-400/30 relative group">
+                            <div className="absolute inset-0 bg-emerald-400/20 rounded-2xl blur-md group-hover:blur-xl transition-all duration-500"></div>
+                            <Brain className="w-8 h-8 text-white relative z-10" />
                         </div>
                         <div>
-                            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-                                STRATOS<span className="text-emerald-500">.AI</span>
+                            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tighter text-white drop-shadow-lg">
+                                STRATOS<span className="text-emerald-400">.AI</span>
                             </h1>
-                            <div className="flex items-center gap-3 mt-1.5">
-                                <span className="flex h-2 w-2 relative">
+                            <div className="flex items-center gap-3 mt-2">
+                                <span className="flex h-2.5 w-2.5 relative">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]"></span>
                                 </span>
-                                <p className="text-gray-400 text-xs sm:text-sm font-mono tracking-wider uppercase">
+                                <p className="text-emerald-500/80 text-xs sm:text-sm font-mono tracking-widest uppercase font-semibold">
                                     System Online • v24.0.1
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 sm:gap-6 w-full md:w-auto">
-                        <div className="flex-1 md:flex-none flex items-center justify-between gap-4 bg-black/40 border border-white/5 rounded-2xl px-5 py-3">
+                    <div className="flex flex-wrap items-center gap-4 sm:gap-6 w-full md:w-auto relative z-10">
+                        <div className="flex-1 md:flex-none flex items-center justify-between gap-6 bg-black/60 border border-white/10 rounded-2xl px-6 py-4 shadow-inner">
                             <span className="text-xs text-gray-500 font-mono uppercase tracking-widest">Bankroll</span>
                             <div className="flex items-center">
-                                <span className="text-emerald-500 font-mono mr-1">$</span>
+                                <span className="text-emerald-500 font-mono mr-1.5 font-bold">$</span>
                                 <input
                                     type="number"
                                     value={bankroll}
                                     step="10"
                                     min="100"
-                                    className="bg-transparent font-mono text-xl w-24 text-right focus:outline-none focus:text-emerald-400 transition-colors"
+                                    className="bg-transparent font-mono text-2xl font-bold w-28 text-right focus:outline-none focus:text-emerald-400 transition-colors text-white"
                                     onChange={(e) => saveBankroll(parseFloat(e.target.value))}
                                 />
                             </div>
                         </div>
 
-                        <div className="flex-1 md:flex-none flex items-center justify-between gap-4 bg-black/40 border border-white/5 rounded-2xl px-5 py-3">
+                        <div className="flex-1 md:flex-none flex items-center justify-between gap-6 bg-black/60 border border-white/10 rounded-2xl px-6 py-4 shadow-inner">
                             <span className="text-xs text-gray-500 font-mono uppercase tracking-widest">Win Rate</span>
-                            <div className="text-2xl font-mono text-white">
-                                {successRate}<span className="text-gray-500 text-lg">%</span>
+                            <div className="text-3xl font-mono font-bold text-white">
+                                {successRate}<span className="text-emerald-500 text-xl ml-1">%</span>
                             </div>
                         </div>
                     </div>
                 </header>
 
-                <div className="flex justify-center mb-10">
-                    <div className="glass-panel p-1.5 rounded-2xl flex gap-1">
+                <div className="flex justify-center mb-12 relative z-10">
+                    <div className="glass-panel p-2 rounded-2xl flex gap-2 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent pointer-events-none"></div>
                         <button 
                             onClick={() => setMode('SPARTA')}
-                            className={`px-8 py-2.5 rounded-xl font-semibold text-sm tracking-wide transition-all duration-300 ${mode === 'SPARTA' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'}`}
+                            className={`relative z-10 px-10 py-3.5 rounded-xl font-bold text-sm tracking-widest transition-all duration-500 ${mode === 'SPARTA' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)]' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'}`}
                         >
                             SPARTA LOGIC
                         </button>
                         <button 
                             onClick={() => setMode('BATCH')}
-                            className={`px-8 py-2.5 rounded-xl font-semibold text-sm tracking-wide transition-all duration-300 ${mode === 'BATCH' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'}`}
+                            className={`relative z-10 px-10 py-3.5 rounded-xl font-bold text-sm tracking-widest transition-all duration-500 ${mode === 'BATCH' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)]' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'}`}
                         >
                             BATCH ODDS
                         </button>

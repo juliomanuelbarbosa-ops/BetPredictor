@@ -1,4 +1,4 @@
-package com.stratos.ai;
+package com.sparta.app;
 
 import com.getcapacitor.BridgeActivity;
 
