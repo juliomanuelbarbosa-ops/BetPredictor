@@ -204,15 +204,24 @@ export function applyCombatPenalties(matrix: SpartaMatrix, lineupData: any) {
 
 export async function analyzeLineupScreenshot(file: File): Promise<any> {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey || apiKey === 'undefined') {
+            throw new Error("Gemini API Key is missing. If you are running this locally, ensure you have GEMINI_API_KEY set in your .env file and rebuild the app.");
+        }
+
+        const ai = new GoogleGenAI({ apiKey });
         
         const base64EncodeString = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => {
                 const result = reader.result as string;
-                resolve(result.split(',')[1]);
+                if (typeof result === 'string') {
+                    resolve(result.split(',')[1]);
+                } else {
+                    reject(new Error("Failed to read file as base64"));
+                }
             };
-            reader.onerror = reject;
+            reader.onerror = () => reject(new Error("FileReader error"));
             reader.readAsDataURL(file);
         });
 
@@ -267,8 +276,12 @@ Return a JSON object with:
 
         const jsonStr = response.text?.trim() || "{}";
         return JSON.parse(jsonStr);
-    } catch (e) {
+    } catch (e: any) {
         console.error("Gemini Vision failed:", e);
-        throw new Error("Failed to analyze lineup screenshot.");
+        const msg = e.message || "Unknown error";
+        if (msg.includes("API_KEY_INVALID") || msg.includes("API key not found")) {
+            throw new Error("Invalid Gemini API Key. Please check your configuration.");
+        }
+        throw new Error(`Failed to analyze lineup: ${msg}`);
     }
 }

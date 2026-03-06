@@ -112,7 +112,7 @@ export async function getAdvancedMetrics(team: string) {
     };
 }
 
-const BYTEZ_API_KEY = import.meta.env.VITE_BYTEZ_API_KEY || "e6eb939af9210a143459fbdf38262663";
+const BYTEZ_API_KEY = (import.meta as any).env.VITE_BYTEZ_API_KEY || "e6eb939af9210a143459fbdf38262663";
 
 export async function getBytezAnalysis(home: string, away: string, weather: any, odds: any, betstack: any): Promise<{ category: string, market: string, confidence: number, report: string }> {
     try {
