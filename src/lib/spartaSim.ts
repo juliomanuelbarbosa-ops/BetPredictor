@@ -64,13 +64,16 @@ export function runMonteCarlo(matrix: SpartaMatrix, iterations: number = 10000):
     const scoreCounts: Record<string, number> = {};
 
     for (let i = 0; i < iterations; i++) {
-        // Simple Poisson-like distribution based on modified xG
-        const homeXg = matrix.home.xG_base * matrix.home.finishing_mod * (1 / matrix.away.defensive_resilience);
-        const awayXg = matrix.away.xG_base * matrix.away.finishing_mod * (1 / matrix.home.defensive_resilience);
+        // Advanced Poisson-like distribution based on modified xG and field tilt
+        const homeFieldTiltAdvantage = (matrix.home.field_tilt / 50) * 0.1; // Small boost for dominating possession
+        const awayFieldTiltAdvantage = (matrix.away.field_tilt / 50) * 0.1;
 
-        // Simulate goals (very basic Poisson approximation for speed)
-        const homeGoals = simulatePoisson(homeXg);
-        const awayGoals = simulatePoisson(awayXg);
+        const homeXg = (matrix.home.xG_base * matrix.home.finishing_mod * (1 / matrix.away.defensive_resilience)) + homeFieldTiltAdvantage;
+        const awayXg = (matrix.away.xG_base * matrix.away.finishing_mod * (1 / matrix.home.defensive_resilience)) + awayFieldTiltAdvantage;
+
+        // Simulate goals using Poisson distribution
+        const homeGoals = simulatePoisson(Math.max(0.1, homeXg)); // Ensure lambda is positive
+        const awayGoals = simulatePoisson(Math.max(0.1, awayXg));
 
         homeGoalsTotal += homeGoals;
         awayGoalsTotal += awayGoals;

@@ -307,112 +307,131 @@ export default function App() {
     const successRate = totalGames > 0 ? Math.round((totalCorrect / totalGames) * 100) : 0;
 
     return (
-        <div className="bg-gradient-to-br from-gray-950 to-black text-gray-100 min-h-screen font-sans">
-            <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div className="bg-[#0a0a0a] text-gray-100 min-h-screen font-sans selection:bg-emerald-500/30">
+            <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
                 {globalError && (
-                    <div className="bg-red-900/50 border border-red-500 text-red-200 p-4 rounded-xl mb-6">
-                        <strong>Error:</strong> {globalError}
+                    <div className="bg-red-900/50 border border-red-500/50 text-red-200 p-4 rounded-xl mb-6 backdrop-blur-sm">
+                        <strong className="font-mono">ERROR:</strong> {globalError}
                     </div>
                 )}
                 
                 {/* HEADER */}
-                <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl flex items-center justify-center text-3xl font-black shadow-lg">
-                            AI
+                <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 glass-panel rounded-3xl p-6 sm:p-8">
+                    <div className="flex items-center gap-5">
+                        <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-emerald-900 rounded-2xl flex items-center justify-center text-2xl font-black shadow-[0_0_30px_rgba(16,185,129,0.2)] border border-emerald-400/20">
+                            <Brain className="w-7 h-7 text-white" />
                         </div>
                         <div>
-                            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
-                                Bet Predictor AI
+                            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
+                                STRATOS<span className="text-emerald-500">.AI</span>
                             </h1>
-                            <p className="text-emerald-300/80 text-sm sm:text-base mt-1">
-                                v23 • 100% Free • Real APIs Activated
-                            </p>
+                            <div className="flex items-center gap-3 mt-1.5">
+                                <span className="flex h-2 w-2 relative">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                </span>
+                                <p className="text-gray-400 text-xs sm:text-sm font-mono tracking-wider uppercase">
+                                    System Online • v24.0.1
+                                </p>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-                        <div className="flex items-center gap-3 bg-gray-900/70 backdrop-blur-sm border border-gray-700/50 rounded-2xl px-5 py-3">
-                            <span className="text-xs text-gray-400 whitespace-nowrap">Bankroll</span>
-                            <input
-                                type="number"
-                                value={bankroll}
-                                step="10"
-                                min="100"
-                                className="bg-transparent font-mono text-xl w-28 text-right focus:outline-none focus:ring-2 focus:ring-emerald-500/30 rounded px-2 py-1"
-                                onChange={(e) => saveBankroll(parseFloat(e.target.value))}
-                            />
+                    <div className="flex flex-wrap items-center gap-4 sm:gap-6 w-full md:w-auto">
+                        <div className="flex-1 md:flex-none flex items-center justify-between gap-4 bg-black/40 border border-white/5 rounded-2xl px-5 py-3">
+                            <span className="text-xs text-gray-500 font-mono uppercase tracking-widest">Bankroll</span>
+                            <div className="flex items-center">
+                                <span className="text-emerald-500 font-mono mr-1">$</span>
+                                <input
+                                    type="number"
+                                    value={bankroll}
+                                    step="10"
+                                    min="100"
+                                    className="bg-transparent font-mono text-xl w-24 text-right focus:outline-none focus:text-emerald-400 transition-colors"
+                                    onChange={(e) => saveBankroll(parseFloat(e.target.value))}
+                                />
+                            </div>
                         </div>
 
-                        <div className="text-right">
-                            <div className="text-xs text-gray-400">Success Rate</div>
-                            <div className="text-3xl sm:text-4xl font-black text-emerald-400">
-                                {successRate}%
+                        <div className="flex-1 md:flex-none flex items-center justify-between gap-4 bg-black/40 border border-white/5 rounded-2xl px-5 py-3">
+                            <span className="text-xs text-gray-500 font-mono uppercase tracking-widest">Win Rate</span>
+                            <div className="text-2xl font-mono text-white">
+                                {successRate}<span className="text-gray-500 text-lg">%</span>
                             </div>
                         </div>
                     </div>
                 </header>
 
-                <div className="flex justify-center mb-8">
-                    <div className="bg-gray-900 p-1 rounded-xl flex gap-1 border border-gray-800">
+                <div className="flex justify-center mb-10">
+                    <div className="glass-panel p-1.5 rounded-2xl flex gap-1">
                         <button 
                             onClick={() => setMode('SPARTA')}
-                            className={`px-6 py-2 rounded-lg font-bold text-sm transition-all ${mode === 'SPARTA' ? 'bg-emerald-600 text-white shadow-lg' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'}`}
+                            className={`px-8 py-2.5 rounded-xl font-semibold text-sm tracking-wide transition-all duration-300 ${mode === 'SPARTA' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'}`}
                         >
                             SPARTA LOGIC
                         </button>
                         <button 
                             onClick={() => setMode('BATCH')}
-                            className={`px-6 py-2 rounded-lg font-bold text-sm transition-all ${mode === 'BATCH' ? 'bg-emerald-600 text-white shadow-lg' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'}`}
+                            className={`px-8 py-2.5 rounded-xl font-semibold text-sm tracking-wide transition-all duration-300 ${mode === 'BATCH' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'}`}
                         >
                             BATCH ODDS
                         </button>
                     </div>
                 </div>
 
-                {mode === 'SPARTA' ? (
-                    <SpartaMode 
-                        phase={phase}
-                        matchInput={matchInput}
-                        setMatchInput={setMatchInput}
-                        isLoading={isLoading}
-                        loadingStep={loadingStep}
-                        initializeStratos={initializeStratos}
-                        stratosResult={stratosResult}
-                        spartaMatrix={spartaMatrix}
-                        combatResult={combatResult}
-                        lineupAnalysis={lineupAnalysis}
-                        isDragging={isDragging}
-                        handleDragOver={handleDragOver}
-                        handleDragLeave={handleDragLeave}
-                        handleDrop={handleDrop}
-                        handleFileChange={handleFileChange}
-                        resetSparta={() => {
-                            setPhase('STRATOS');
-                            setSpartaMatrix(null);
-                            setStratosResult(null);
-                            setCombatResult(null);
-                            setLineupAnalysis(null);
-                            setMatchInput("");
-                        }}
-                    />
-                ) : (
-                    <BatchMode 
-                        isLoading={isLoading}
-                        loadingStep={loadingStep}
-                        isDragging={isDragging}
-                        handleDragOver={handleDragOver}
-                        handleDragLeave={handleDragLeave}
-                        handleDrop={handleDrop}
-                        handleFileChange={handleFileChange}
-                        predictions={predictions}
-                    />
-                )}
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={mode}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                    >
+                        {mode === 'SPARTA' ? (
+                            <SpartaMode 
+                                phase={phase}
+                                matchInput={matchInput}
+                                setMatchInput={setMatchInput}
+                                isLoading={isLoading}
+                                loadingStep={loadingStep}
+                                initializeStratos={initializeStratos}
+                                stratosResult={stratosResult}
+                                spartaMatrix={spartaMatrix}
+                                combatResult={combatResult}
+                                lineupAnalysis={lineupAnalysis}
+                                isDragging={isDragging}
+                                handleDragOver={handleDragOver}
+                                handleDragLeave={handleDragLeave}
+                                handleDrop={handleDrop}
+                                handleFileChange={handleFileChange}
+                                resetSparta={() => {
+                                    setPhase('STRATOS');
+                                    setSpartaMatrix(null);
+                                    setStratosResult(null);
+                                    setCombatResult(null);
+                                    setLineupAnalysis(null);
+                                    setMatchInput("");
+                                }}
+                            />
+                        ) : (
+                            <BatchMode 
+                                isLoading={isLoading}
+                                loadingStep={loadingStep}
+                                isDragging={isDragging}
+                                handleDragOver={handleDragOver}
+                                handleDragLeave={handleDragLeave}
+                                handleDrop={handleDrop}
+                                handleFileChange={handleFileChange}
+                                predictions={predictions}
+                            />
+                        )}
+                    </motion.div>
+                </AnimatePresence>
 
                 {/* FOOTER */}
-                <footer className="mt-16 text-center text-xs text-gray-600 pb-8">
-                    <button onClick={clearHistory} className="hover:text-gray-400 transition-colors">Clear All History & Reset</button>
-                    <p className="mt-3">v24 • March 5, 2026 • Sparta Logic & Combat Phase Protocols Active</p>
+                <footer className="mt-20 text-center text-xs text-gray-600 pb-12 font-mono flex flex-col items-center gap-4">
+                    <button onClick={clearHistory} className="hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 transition-all duration-300 border border-white/5 rounded-lg px-6 py-2 tracking-widest uppercase">PURGE SYSTEM DATA</button>
+                    <p className="tracking-widest opacity-50">STRATOS.AI // SPARTA PROTOCOL // T-MINUS 60M</p>
                 </footer>
             </div>
 
@@ -423,10 +442,10 @@ export default function App() {
                         initial={{ opacity: 0, y: 30, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 30, scale: 0.95 }}
-                        className="fixed bottom-6 right-6 bg-emerald-700/90 backdrop-blur-md text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 z-50"
+                        className="fixed bottom-8 right-8 bg-black/80 backdrop-blur-xl border border-emerald-500/30 text-emerald-50 px-6 py-4 rounded-2xl shadow-[0_10px_40px_rgba(16,185,129,0.2)] flex items-center gap-3 z-50 font-mono text-sm"
                     >
-                        <CheckCircle className="w-5 h-5" />
-                        <span className="font-medium">{toast}</span>
+                        <CheckCircle className="w-5 h-5 text-emerald-400" />
+                        <span className="tracking-wide">{toast}</span>
                     </motion.div>
                 )}
             </AnimatePresence>
