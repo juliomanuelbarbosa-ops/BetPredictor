@@ -7,6 +7,8 @@ import { predictWithModel, createAndTrainModel } from './lib/ai';
 import { initializeSpartaMatrix, runMonteCarlo, applyCombatPenalties, analyzeLineupScreenshot } from './lib/spartaSim';
 import { footballData } from './lib/data';
 import { motion, AnimatePresence } from 'motion/react';
+import { SpartaMode } from './components/SpartaMode';
+import { BatchMode } from './components/BatchMode';
 
 const leagueMap: Record<string, { oddsKey: string }> = {
     "premier league": {oddsKey: "soccer_epl"},
@@ -43,6 +45,8 @@ export default function App() {
     const [stratosResult, setStratosResult] = useState<any>(null);
     const [combatResult, setCombatResult] = useState<any>(null);
     const [lineupAnalysis, setLineupAnalysis] = useState<any>(null);
+
+    const [mode, setMode] = useState<'SPARTA' | 'BATCH'>('SPARTA');
 
     useEffect(() => {
         const handleError = (e: ErrorEvent) => {
@@ -92,7 +96,7 @@ export default function App() {
             const home = parts[0]?.trim() || "Home";
             const away = parts[1]?.trim() || "Away";
             
-            const matrix = initializeSpartaMatrix(home, away);
+            const matrix = await initializeSpartaMatrix(home, away);
             setSpartaMatrix(matrix);
             
             setLoadingStep("Running baseline 10,000-iteration Monte Carlo simulation...");
@@ -152,9 +156,9 @@ export default function App() {
         const file = e.target.files?.[0];
         if (!file) return;
         e.target.value = '';
-        if (spartaMatrix) {
+        if (mode === 'SPARTA' && spartaMatrix) {
             await processLineupScreenshot(file);
-        } else {
+        } else if (mode === 'BATCH') {
             await processFile(file);
         }
     };
@@ -292,7 +296,12 @@ export default function App() {
         setIsDragging(false);
         const file = e.dataTransfer.files?.[0];
         if (!file) return;
-        await processFile(file);
+        
+        if (mode === 'SPARTA' && phase === 'STRATOS' && spartaMatrix) {
+            await processLineupScreenshot(file);
+        } else if (mode === 'BATCH') {
+            await processFile(file);
+        }
     };
 
     const successRate = totalGames > 0 ? Math.round((totalCorrect / totalGames) * 100) : 0;
@@ -344,136 +353,61 @@ export default function App() {
                     </div>
                 </header>
 
-                {/* SPARTA LOGIC AREA */}
-                <section className="bg-gradient-to-br from-gray-900 to-gray-950 border border-gray-800/50 rounded-3xl p-6 sm:p-10 mb-10 shadow-2xl">
-                    <div className="flex flex-col items-center gap-6">
-                        {/* STRATOS PHASE */}
-                        <div className="w-full max-w-2xl">
-                            <h2 className="text-2xl font-bold mb-4 text-emerald-400">Phase 1: Stratos (T-24h)</h2>
-                            <div className="flex gap-4 mb-6">
-                                <input 
-                                    type="text" 
-                                    placeholder="Enter Match (e.g., Arsenal vs Chelsea)" 
-                                    className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500"
-                                    value={matchInput}
-                                    onChange={(e) => setMatchInput(e.target.value)}
-                                    disabled={isLoading || phase === 'COMBAT'}
-                                />
-                                <button 
-                                    onClick={initializeStratos}
-                                    disabled={isLoading || phase === 'COMBAT'}
-                                    className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-xl font-bold transition-colors disabled:opacity-50"
-                                >
-                                    Initialize Matrix
-                                </button>
-                            </div>
-                            
-                            {stratosResult && (
-                                <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4 mb-6">
-                                    <h3 className="text-lg font-semibold mb-2 text-gray-300">Baseline Monte Carlo Results (10,000 iterations)</h3>
-                                    <div className="grid grid-cols-3 gap-4 text-center">
-                                        <div>
-                                            <div className="text-sm text-gray-400">Home Win</div>
-                                            <div className="text-xl font-bold text-emerald-400">{stratosResult.homeWins.toFixed(1)}%</div>
-                                        </div>
-                                        <div>
-                                            <div className="text-sm text-gray-400">Draw</div>
-                                            <div className="text-xl font-bold text-gray-300">{stratosResult.draws.toFixed(1)}%</div>
-                                        </div>
-                                        <div>
-                                            <div className="text-sm text-gray-400">Away Win</div>
-                                            <div className="text-xl font-bold text-emerald-400">{stratosResult.awayWins.toFixed(1)}%</div>
-                                        </div>
-                                    </div>
-                                    <div className="mt-4 text-center text-sm text-gray-400">
-                                        Most Likely Score: <span className="text-white font-bold">{stratosResult.mostLikelyScore}</span>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* COMBAT PHASE */}
-                        {spartaMatrix && (
-                            <div className="w-full max-w-2xl border-t border-gray-800 pt-8 mt-4">
-                                <h2 className="text-2xl font-bold mb-4 text-emerald-400">Phase 2: Combat (T-60m)</h2>
-                                <p className="text-gray-400 mb-4">Upload a SofaScore or FlashScore lineup screenshot to extract Starting XI and apply FM Penalty Logic.</p>
-                                
-                                <div 
-                                    onClick={() => !isLoading && fileInputRef.current?.click()}
-                                    onDragOver={handleDragOver}
-                                    onDragLeave={handleDragLeave}
-                                    onDrop={handleDrop}
-                                    className={`w-full h-48 border-4 border-dashed rounded-3xl flex flex-col items-center justify-center transition-all duration-300 ${
-                                        isDragging 
-                                            ? 'border-emerald-500 bg-emerald-950/20 scale-[1.02]' 
-                                            : isLoading 
-                                                ? 'border-emerald-500/30 bg-gray-900/50 cursor-wait' 
-                                                : 'border-gray-700/70 cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-950/10'
-                                    }`}
-                                >
-                                    {isLoading ? (
-                                        <div className="flex flex-col items-center">
-                                            <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mb-4"></div>
-                                            <p className="text-lg text-emerald-400 font-medium animate-pulse">{loadingStep}</p>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <UploadCloud className={`w-12 h-12 mb-4 transition-colors ${isDragging ? 'text-emerald-400' : 'text-gray-500/70'}`} />
-                                            <p className="text-lg text-gray-300 font-medium">{isDragging ? 'Drop lineup here!' : 'Drop lineup screenshot here'}</p>
-                                        </>
-                                    )}
-                                </div>
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    accept="image/*"
-                                    className="hidden"
-                                    onChange={handleFileChange}
-                                    disabled={isLoading}
-                                />
-                                
-                                {combatResult && lineupAnalysis && (
-                                    <div className="mt-8 space-y-6">
-                                        <div className="bg-red-900/20 border border-red-900/50 rounded-xl p-4">
-                                            <h3 className="text-lg font-semibold mb-2 text-red-400">FM Penalty Logic Applied</h3>
-                                            <ul className="text-sm text-gray-300 space-y-1 list-disc pl-5">
-                                                <li>Home Formation: {lineupAnalysis.homeFormation}</li>
-                                                <li>Away Formation: {lineupAnalysis.awayFormation}</li>
-                                                {lineupAnalysis.homeMissingATier > 0 && <li className="text-red-300">Home missing {lineupAnalysis.homeMissingATier} A-Tier players (-{lineupAnalysis.homeMissingATier * 15}% efficiency)</li>}
-                                                {lineupAnalysis.awayMissingATier > 0 && <li className="text-red-300">Away missing {lineupAnalysis.awayMissingATier} A-Tier players (-{lineupAnalysis.awayMissingATier * 15}% efficiency)</li>}
-                                                <li>Game Changers on Bench: {lineupAnalysis.gameChangers.join(', ') || 'None identified'}</li>
-                                            </ul>
-                                        </div>
-                                        
-                                        <div className="bg-emerald-900/20 border border-emerald-900/50 rounded-xl p-4">
-                                            <h3 className="text-lg font-semibold mb-2 text-emerald-400">Final Combat Results (10,000 iterations)</h3>
-                                            <div className="grid grid-cols-3 gap-4 text-center">
-                                                <div>
-                                                    <div className="text-sm text-gray-400">Home Win</div>
-                                                    <div className="text-xl font-bold text-emerald-400">{combatResult.homeWins.toFixed(1)}%</div>
-                                                    <div className="text-xs text-gray-500">vs {stratosResult.homeWins.toFixed(1)}%</div>
-                                                </div>
-                                                <div>
-                                                    <div className="text-sm text-gray-400">Draw</div>
-                                                    <div className="text-xl font-bold text-gray-300">{combatResult.draws.toFixed(1)}%</div>
-                                                    <div className="text-xs text-gray-500">vs {stratosResult.draws.toFixed(1)}%</div>
-                                                </div>
-                                                <div>
-                                                    <div className="text-sm text-gray-400">Away Win</div>
-                                                    <div className="text-xl font-bold text-emerald-400">{combatResult.awayWins.toFixed(1)}%</div>
-                                                    <div className="text-xs text-gray-500">vs {stratosResult.awayWins.toFixed(1)}%</div>
-                                                </div>
-                                            </div>
-                                            <div className="mt-4 text-center text-sm text-gray-400">
-                                                Most Likely Score: <span className="text-white font-bold">{combatResult.mostLikelyScore}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                <div className="flex justify-center mb-8">
+                    <div className="bg-gray-900 p-1 rounded-xl flex gap-1 border border-gray-800">
+                        <button 
+                            onClick={() => setMode('SPARTA')}
+                            className={`px-6 py-2 rounded-lg font-bold text-sm transition-all ${mode === 'SPARTA' ? 'bg-emerald-600 text-white shadow-lg' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'}`}
+                        >
+                            SPARTA LOGIC
+                        </button>
+                        <button 
+                            onClick={() => setMode('BATCH')}
+                            className={`px-6 py-2 rounded-lg font-bold text-sm transition-all ${mode === 'BATCH' ? 'bg-emerald-600 text-white shadow-lg' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'}`}
+                        >
+                            BATCH ODDS
+                        </button>
                     </div>
-                </section>
+                </div>
+
+                {mode === 'SPARTA' ? (
+                    <SpartaMode 
+                        phase={phase}
+                        matchInput={matchInput}
+                        setMatchInput={setMatchInput}
+                        isLoading={isLoading}
+                        loadingStep={loadingStep}
+                        initializeStratos={initializeStratos}
+                        stratosResult={stratosResult}
+                        spartaMatrix={spartaMatrix}
+                        combatResult={combatResult}
+                        lineupAnalysis={lineupAnalysis}
+                        isDragging={isDragging}
+                        handleDragOver={handleDragOver}
+                        handleDragLeave={handleDragLeave}
+                        handleDrop={handleDrop}
+                        handleFileChange={handleFileChange}
+                        resetSparta={() => {
+                            setPhase('STRATOS');
+                            setSpartaMatrix(null);
+                            setStratosResult(null);
+                            setCombatResult(null);
+                            setLineupAnalysis(null);
+                            setMatchInput("");
+                        }}
+                    />
+                ) : (
+                    <BatchMode 
+                        isLoading={isLoading}
+                        loadingStep={loadingStep}
+                        isDragging={isDragging}
+                        handleDragOver={handleDragOver}
+                        handleDragLeave={handleDragLeave}
+                        handleDrop={handleDrop}
+                        handleFileChange={handleFileChange}
+                        predictions={predictions}
+                    />
+                )}
 
                 {/* FOOTER */}
                 <footer className="mt-16 text-center text-xs text-gray-600 pb-8">

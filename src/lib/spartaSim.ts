@@ -1,4 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import { getAdvancedMetrics } from "./api";
 
 export interface SpartaMatrix {
     home: Record<string, number>;
@@ -12,22 +13,31 @@ export interface SimulationResult {
     homeGoalsAvg: number;
     awayGoalsAvg: number;
     mostLikelyScore: string;
+    over25: number;
+    under25: number;
+    btts: number;
+    homeCleanSheet: number;
+    awayCleanSheet: number;
 }
 
-export function initializeSpartaMatrix(homeTeam: string, awayTeam: string): SpartaMatrix {
-    // Initialize 300 variables (simulated for now, focusing on key ones)
-    const createTeamMatrix = () => ({
-        xG_base: 1.0 + Math.random() * 1.5,
-        field_tilt: 40 + Math.random() * 20,
-        save_pct: 60 + Math.random() * 25,
+export async function initializeSpartaMatrix(homeTeam: string, awayTeam: string): Promise<SpartaMatrix> {
+    const homeAdv = await getAdvancedMetrics(homeTeam);
+    const awayAdv = await getAdvancedMetrics(awayTeam);
+
+    const createTeamMatrix = (adv: any) => ({
+        xG_base: parseFloat(adv.xG) || (1.0 + Math.random() * 1.5),
+        field_tilt: parseFloat(adv.Field_Tilt) || (40 + Math.random() * 20),
+        save_pct: parseFloat(adv.Save_Percentage) || (60 + Math.random() * 25),
         finishing_mod: 1.0,
-        defensive_resilience: 1.0,
-        // ... imagine 295 more variables here
+        defensive_resilience: parseFloat(adv.Defensive_Resilience_Index) || 1.0,
+        ppda: parseFloat(adv.PPDA) || 10.0,
+        clean_sheet_prob: parseFloat(adv.Clean_Sheet_Probability) || 25.0,
+        // ... imagine 293 more variables here
     });
 
     return {
-        home: createTeamMatrix(),
-        away: createTeamMatrix()
+        home: createTeamMatrix(homeAdv),
+        away: createTeamMatrix(awayAdv)
     };
 }
 
@@ -37,6 +47,11 @@ export function runMonteCarlo(matrix: SpartaMatrix, iterations: number = 10000):
     let awayWins = 0;
     let homeGoalsTotal = 0;
     let awayGoalsTotal = 0;
+    
+    let over25Count = 0;
+    let bttsCount = 0;
+    let homeCleanSheetCount = 0;
+    let awayCleanSheetCount = 0;
 
     const scoreCounts: Record<string, number> = {};
 
@@ -55,6 +70,11 @@ export function runMonteCarlo(matrix: SpartaMatrix, iterations: number = 10000):
         if (homeGoals > awayGoals) homeWins++;
         else if (homeGoals < awayGoals) awayWins++;
         else draws++;
+
+        if (homeGoals + awayGoals > 2.5) over25Count++;
+        if (homeGoals > 0 && awayGoals > 0) bttsCount++;
+        if (awayGoals === 0) homeCleanSheetCount++;
+        if (homeGoals === 0) awayCleanSheetCount++;
 
         const score = `${homeGoals}-${awayGoals}`;
         scoreCounts[score] = (scoreCounts[score] || 0) + 1;
@@ -75,7 +95,12 @@ export function runMonteCarlo(matrix: SpartaMatrix, iterations: number = 10000):
         awayWins: (awayWins / iterations) * 100,
         homeGoalsAvg: homeGoalsTotal / iterations,
         awayGoalsAvg: awayGoalsTotal / iterations,
-        mostLikelyScore
+        mostLikelyScore,
+        over25: (over25Count / iterations) * 100,
+        under25: ((iterations - over25Count) / iterations) * 100,
+        btts: (bttsCount / iterations) * 100,
+        homeCleanSheet: (homeCleanSheetCount / iterations) * 100,
+        awayCleanSheet: (awayCleanSheetCount / iterations) * 100
     };
 }
 
