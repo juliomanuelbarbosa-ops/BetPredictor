@@ -3,7 +3,7 @@ import { footballData } from './data';
 
 let ensembleModels: tf.Sequential[] = [];
 
-// Feature vector size: 29
+// Feature vector size: 31
 // 0: Odds H, 1: Odds D, 2: Odds A
 // 3: Home Form Pts, 4: Away Form Pts
 // 5: Home GS, 6: Away GS
@@ -21,16 +21,21 @@ let ensembleModels: tf.Sequential[] = [];
 // 23: Home PPDA, 24: Away PPDA
 // 25: Home Field Tilt, 26: Away Field Tilt
 // 27: Home CS Prob, 28: Away CS Prob
+// 29: Home Rest Days, 30: Away Rest Days
 
 function createBaseModel() {
     const model = tf.sequential();
     
     // Deeper, more robust architecture for tabular data
-    model.add(tf.layers.dense({units: 128, inputShape: [29], activation: 'relu', kernelRegularizer: tf.regularizers.l2({l2: 0.01})}));
+    model.add(tf.layers.dense({units: 256, inputShape: [31], activation: 'relu', kernelRegularizer: tf.regularizers.l2({l2: 0.005})}));
+    model.add(tf.layers.batchNormalization());
+    model.add(tf.layers.dropout({rate: 0.4}));
+    
+    model.add(tf.layers.dense({units: 128, activation: 'relu', kernelRegularizer: tf.regularizers.l2({l2: 0.005})}));
     model.add(tf.layers.batchNormalization());
     model.add(tf.layers.dropout({rate: 0.3}));
     
-    model.add(tf.layers.dense({units: 64, activation: 'relu', kernelRegularizer: tf.regularizers.l2({l2: 0.01})}));
+    model.add(tf.layers.dense({units: 64, activation: 'relu'}));
     model.add(tf.layers.batchNormalization());
     model.add(tf.layers.dropout({rate: 0.2}));
     
@@ -40,7 +45,7 @@ function createBaseModel() {
     model.add(tf.layers.dense({units: 3, activation: 'softmax'}));
 
     model.compile({
-        optimizer: tf.train.adam(0.001),
+        optimizer: tf.train.adam(0.0005), // Lower learning rate for stability
         loss: 'sparseCategoricalCrossentropy',
         metrics: ['accuracy']
     });
@@ -55,8 +60,8 @@ export async function createAndTrainModel(onProgress?: (msg: string) => void) {
     if (onProgress) onProgress("Loading historical match data...");
     await footballData.loadData();
     
-    // Create an ensemble of 3 models
-    for (let i = 0; i < 3; i++) {
+    // Create an ensemble of 5 models
+    for (let i = 0; i < 5; i++) {
         ensembleModels.push(createBaseModel());
     }
 
@@ -68,9 +73,9 @@ async function loadHistoricalData(models: tf.Sequential[], onProgress?: (msg: st
     const matches = footballData.getMatches();
     if (matches.length === 0) return;
 
-    // We'll use the last 2000 matches for training
-    if (onProgress) onProgress("Preparing training data from 2000 matches...");
-    const trainingData = matches.slice(-2000);
+    // We'll use the last 3000 matches for training
+    if (onProgress) onProgress("Preparing training data from 3000 matches...");
+    const trainingData = matches.slice(-3000);
     
     const features: number[][] = [];
     const labels: number[] = [];
@@ -104,7 +109,9 @@ async function loadHistoricalData(models: tf.Sequential[], onProgress?: (msg: st
             40 + Math.random() * 20, // Home Field Tilt
             40 + Math.random() * 20, // Away Field Tilt
             10 + Math.random() * 40, // Home CS Prob
-            10 + Math.random() * 40 // Away CS Prob
+            10 + Math.random() * 40, // Away CS Prob
+            3 + Math.random() * 4, // Home Rest Days
+            3 + Math.random() * 4  // Away Rest Days
         ];
         
         features.push(row);
@@ -118,10 +125,10 @@ async function loadHistoricalData(models: tf.Sequential[], onProgress?: (msg: st
 
     // Train each model in the ensemble
     for (let i = 0; i < models.length; i++) {
-        if (onProgress) onProgress(`Training ensemble model ${i + 1}/3...`);
+        if (onProgress) onProgress(`Training ensemble model ${i + 1}/5...`);
         await models[i].fit(xs, ys, {
-            epochs: 15, 
-            batchSize: 32,
+            epochs: 20, 
+            batchSize: 64,
             shuffle: true
         });
     }

@@ -235,7 +235,8 @@ export default function App() {
                     parseFloat(homeAdv.xG), parseFloat(awayAdv.xG),
                     parseFloat(homeAdv.PPDA), parseFloat(awayAdv.PPDA),
                     parseFloat(homeAdv.Field_Tilt), parseFloat(awayAdv.Field_Tilt),
-                    parseFloat(homeAdv.Clean_Sheet_Probability), parseFloat(awayAdv.Clean_Sheet_Probability)
+                    parseFloat(homeAdv.Clean_Sheet_Probability), parseFloat(awayAdv.Clean_Sheet_Probability),
+                    parseFloat(homeAdv.Rest_Days), parseFloat(awayAdv.Rest_Days)
                 ];
 
                 const probs = await predictWithModel(features);
