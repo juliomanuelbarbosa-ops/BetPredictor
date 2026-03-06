@@ -108,9 +108,9 @@ export function BatchMode({
 
                                     <div className="bg-gray-950/50 rounded-xl p-4 border border-gray-800/50">
                                         <div className="text-sm text-gray-400 mb-2">Tactical Insight</div>
-                                        <p className="text-sm text-gray-300 leading-relaxed">{pred.bytezAnalysis.analysis}</p>
+                                        <p className="text-sm text-gray-300 leading-relaxed">{pred.bytezAnalysis.report}</p>
                                         <div className="mt-3 pt-3 border-t border-gray-800/50 flex justify-between items-center">
-                                            <span className="text-xs text-gray-500">Top Market</span>
+                                            <span className="text-xs text-gray-500">Top Market ({pred.bytezAnalysis.category})</span>
                                             <span className="text-sm font-bold text-emerald-400">{pred.bytezAnalysis.market}</span>
                                         </div>
                                     </div>

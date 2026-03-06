@@ -114,7 +114,7 @@ export async function getAdvancedMetrics(team: string) {
 
 const BYTEZ_API_KEY = import.meta.env.VITE_BYTEZ_API_KEY || "e6eb939af9210a143459fbdf38262663";
 
-export async function getBytezAnalysis(home: string, away: string, weather: any, odds: any, betstack: any): Promise<{ market: string, confidence: number, report: string }> {
+export async function getBytezAnalysis(home: string, away: string, weather: any, odds: any, betstack: any): Promise<{ category: string, market: string, confidence: number, report: string }> {
     try {
         const h2h = footballData.getH2H(home, away);
         const homeForm = footballData.getTeamForm(home);
@@ -140,7 +140,7 @@ export async function getBytezAnalysis(home: string, away: string, weather: any,
                         content: `You are an expert sports betting quantitative analyst. 
 Analyze the match and recommend the best betting market from the extensive list below.
 Available Markets:
-1. Main: 1X2, Double Chance, Draw No Bet, European/Asian Handicap, Winning Margin, Correct Score, HT/FT, To Win to Nil, To Win Either/Both Halves, Result after 10/20/30 Mins, Match Result & BTTS.
+1. Main Match: 1X2, Double Chance, Draw No Bet, European/Asian Handicap, Winning Margin, Correct Score, HT/FT, To Win to Nil, To Win Either/Both Halves, Result after 10/20/30 Mins, Match Result & BTTS.
 2. Goals: Over/Under 0.5 to 4.5, BTTS (Full/1st/2nd Half), BTTS & Over 2.5, Exact Goals, Team Total Goals, Team to Score First/Last, Time of First/Last Goal, Goal Scored in 15-min intervals, Late/Early Goal, Total Goals Odd/Even.
 3. Player Props: Anytime/First/Last Goalscorer, Brace, Hat-trick, Score from Outside Box/Header/Penalty/Free Kick, Assist Anytime, To be Carded/Sent Off, Shots on Target (1+/2+/3+), Total Shots/Passes/Tackles (O/U), GK Saves (O/U), Score & Team to Win.
 4. Corners & Booking: Total Match Corners (O/U, Asian), 1st/2nd Half Corners, Corner Handicap, First/Last Corner, Team with Most Corners, Race to 3/5/7/9 Corners, Total Match Cards (O/U, Asian), Total Yellow/Red Cards, Time of First Card, Sending Off (Yes/No), Penalty Awarded/Missed/Scored.
@@ -148,7 +148,8 @@ Available Markets:
 6. Special & Combo: Match Result & O/U 2.5, BTTS & O/U 2.5, 1st & 2nd Half Over 0.5, Team to Score in Both Halves, Penalty + Red Card, Clean Sheet, Clean Sheet & Win, Scorecast, Wincast, Goal/Corner/Card in Both Halves, First/Last Team Carded.
 7. Micro-Betting: Next Goal Method, Next Corner/Card, Throw-in/Free Kick/Goal Kick in 1st min, Ball out of play, Next Goal Scorer, Result/Corner/Card in next 5 mins.
 
-Provide your response in STRICTLY valid JSON format with three keys:
+Provide your response in STRICTLY valid JSON format with four keys:
+- "category": (string) The category of the market from the list above (e.g., "Goals", "Player Props", "Special & Combo").
 - "market": (string) The specific bet to place from the list above (e.g., "Over 2.5 Goals", "Home Win & BTTS", "Player to have 2+ Shots on Target").
 - "confidence": (number) A confidence score from 1 to 100.
 - "report": (string) A serious, detailed 3-4 sentence explanation of why this market was chosen. Consider weather conditions, odds value, and tactical matchups. Do not include any markdown formatting or extra text outside the JSON.`
@@ -175,6 +176,7 @@ Advanced Metrics (${away}): xG: ${awayAdv.xG}, PPDA: ${awayAdv.PPDA}, Field Tilt
         const parsed = JSON.parse(jsonStr);
         
         return {
+            category: parsed.category || "Main Match",
             market: parsed.market || "1X2",
             confidence: parsed.confidence || 50,
             report: parsed.report || "Neutral tactical matchup expected."
@@ -182,6 +184,7 @@ Advanced Metrics (${away}): xG: ${awayAdv.xG}, PPDA: ${awayAdv.PPDA}, Field Tilt
     } catch (e) {
         console.error("Bytez error:", e);
         return {
+            category: "Main Match",
             market: "1X2",
             confidence: 50,
             report: "Neutral tactical matchup expected. Data insufficient for deep analysis."
