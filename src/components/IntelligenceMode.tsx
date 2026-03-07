@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bot, Send, Terminal, Cpu, Zap, Shield, Search, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Bot, Send, Terminal, Cpu, Zap, Shield, Search, TrendingUp, AlertTriangle, Network } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
+import { getApiKey } from '../api/footballApi';
+import { orchestrator } from '../agents/MasterAgent';
 
 interface Message {
     id: string;
@@ -56,7 +58,41 @@ export function IntelligenceMode() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [isTyping, setIsTyping] = useState(false);
+    const [isOrchestrating, setIsOrchestrating] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    const runOrchestration = async () => {
+        if (isOrchestrating) return;
+        setIsOrchestrating(true);
+        
+        const startMsg: Message = {
+            id: Date.now().toString(),
+            role: 'agent',
+            agentName: 'MASTER_AGENT',
+            content: "Initiating multi-agent orchestration sequence. Syncing NEWS_AGENT and MARKET_AGENT...",
+            timestamp: new Date()
+        };
+        setMessages(prev => [...prev, startMsg]);
+
+        try {
+            // Simulated odds for the orchestration
+            const mockOdds = { home: 2.1, draw: 3.4, away: 3.2, movement: -0.15 };
+            const result = await orchestrator.orchestrate("Arsenal", "Liverpool", mockOdds);
+
+            const finalMsg: Message = {
+                id: (Date.now() + 1).toString(),
+                role: 'agent',
+                agentName: 'MASTER_AGENT',
+                content: `### ORCHESTRATION COMPLETE\n\n**NEWS_AGENT REPORT:**\n${result.news.summary}\n\n**MARKET_AGENT REPORT:**\n${result.market.summary}\n\n**MASTER RECOMMENDATION:**\n${result.master.recommendation}\n\n**CONFIDENCE:** ${result.master.confidence}%\n\n${result.master.shouldNotify ? "🚨 **PUSH NOTIFICATION DISPATCHED**" : "✅ **NO CRITICAL ALERT REQUIRED**"}`,
+                timestamp: new Date()
+            };
+            setMessages(prev => [...prev, finalMsg]);
+        } catch (error: any) {
+            console.error("Orchestration Error:", error);
+        } finally {
+            setIsOrchestrating(false);
+        }
+    };
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -93,7 +129,9 @@ export function IntelligenceMode() {
         setIsTyping(true);
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+            const userKey = getApiKey("VITE_GEMINI_API_KEY");
+            const apiKey = userKey || process.env.GEMINI_API_KEY!;
+            const ai = new GoogleGenAI({ apiKey });
             const response = await ai.models.generateContent({
                 model: "gemini-3-flash-preview",
                 contents: textToSend,
@@ -187,6 +225,14 @@ export function IntelligenceMode() {
                             <div className="flex justify-between items-center">
                                 <span className="text-[9px] font-mono text-gray-600">Auth</span>
                                 <span className="text-[9px] font-mono text-emerald-400">System Key</span>
+                            </div>
+                            <div className="pt-2 border-t border-white/5">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-[9px] font-mono text-gray-600 uppercase tracking-widest">Orchestration</span>
+                                    <span className={`text-[9px] font-mono ${isOrchestrating ? 'text-blue-400 animate-pulse' : 'text-gray-700'}`}>
+                                        {isOrchestrating ? 'ACTIVE' : 'READY'}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -308,6 +354,14 @@ export function IntelligenceMode() {
                                 >
                                     <AlertTriangle className="w-3 h-3" />
                                     Risk Scan
+                                </button>
+                                <button 
+                                    onClick={runOrchestration}
+                                    disabled={isOrchestrating}
+                                    className="text-[9px] font-mono text-gray-600 hover:text-blue-400 transition-colors uppercase tracking-widest flex items-center gap-1 border-l border-white/5 pl-4 ml-2"
+                                >
+                                    <Network className={`w-3 h-3 ${isOrchestrating ? 'animate-spin' : ''}`} />
+                                    {isOrchestrating ? 'Orchestrating...' : 'Tactical Sync'}
                                 </button>
                             </div>
                             <span className="text-[9px] font-mono text-gray-700 uppercase tracking-widest">Neural Link: SECURE</span>

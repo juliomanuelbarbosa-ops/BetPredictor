@@ -48,12 +48,10 @@ class FootballDataService {
                 const validMatches = parsed.data
                     .filter((r: any) => r.HomeTeam && r.AwayTeam && r.FTR)
                     .map((r: any) => {
-                        // Parse date (DD/MM/YYYY)
                         let parsedDate = new Date();
                         if (r.Date) {
                             const parts = r.Date.split('/');
                             if (parts.length === 3) {
-                                // football-data.co.uk uses DD/MM/YYYY or DD/MM/YY
                                 const year = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
                                 parsedDate = new Date(`${year}-${parts[1]}-${parts[0]}`);
                             }
@@ -84,9 +82,7 @@ class FootballDataService {
             }
         }
         
-        // Sort matches by date
         this.matches.sort((a, b) => new Date(a.Date).getTime() - new Date(b.Date).getTime());
-        
         this.isLoaded = true;
     }
 
@@ -95,13 +91,11 @@ class FootballDataService {
     }
 
     getTeamForm(team: string, upToDate?: string): { pts: number, gs: number, gc: number, sot: number, yc: number, rc: number } {
-        // Find matches for the team
         let teamMatches = this.matches.filter(m => 
             m.HomeTeam.toLowerCase().includes(team.toLowerCase()) || 
             m.AwayTeam.toLowerCase().includes(team.toLowerCase())
         );
 
-        // If upToDate is provided, only consider matches before that date
         if (upToDate) {
             const limitDate = new Date(upToDate).getTime();
             teamMatches = teamMatches.filter(m => new Date(m.Date).getTime() < limitDate);
@@ -117,11 +111,8 @@ class FootballDataService {
         let rc = 0;
         let totalWeight = 0;
 
-        // Apply weighting: more recent matches have higher weight
-        // last5 array is chronological: index 0 is oldest, index 4 is newest
         for (let i = 0; i < last5.length; i++) {
             const m = last5[i];
-            // Weight increases from 0.6 to 1.0 for the 5 matches
             const weight = 0.6 + (0.1 * i);
             totalWeight += weight;
 
@@ -160,20 +151,17 @@ class FootballDataService {
             rc += matchRc * weight;
         }
 
-        // Fallback if no data found (e.g. team not in CSV)
         if (last5.length === 0) {
-            return { pts: 7, gs: 6, gc: 6, sot: 20, yc: 10, rc: 0 }; // Average realistic stats
+            return { pts: 7, gs: 6, gc: 6, sot: 20, yc: 10, rc: 0 };
         }
 
-        // Normalize by total weight to keep values in expected ranges
-        // Multiply by 5 to simulate the sum of 5 matches as expected by the model
         const normalizationFactor = 5 / totalWeight;
 
         return { 
             pts: pts * normalizationFactor, 
             gs: gs * normalizationFactor, 
             gc: gc * normalizationFactor, 
-            sot: (sot / totalWeight), // sot is an average per match
+            sot: (sot / totalWeight),
             yc: yc * normalizationFactor,
             rc: rc * normalizationFactor
         };

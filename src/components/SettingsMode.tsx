@@ -245,45 +245,93 @@ const API_SERVICES: ApiKey[] = [
     }
 ];
 
-import { getActiveServicesCount } from '../lib/api';
+import { getActiveServicesCount } from '../api/footballApi';
+import { getSecureItem, setSecureItem, removeSecureItem } from '../utils/storage';
 
 export const SettingsMode: React.FC = () => {
     const [keys, setKeys] = useState<Record<string, string>>({});
     const [saved, setSaved] = useState<string | null>(null);
     const [activeCategory, setActiveCategory] = useState<'All' | 'Sports' | 'AI' | 'Weather' | 'Other'>('All');
     const [activeCount, setActiveCount] = useState(0);
+    const [isLocked, setIsLocked] = useState(true);
+    const [vaultStatus, setVaultStatus] = useState<'SECURE' | 'UNLOCKED' | 'EMPTY'>('EMPTY');
 
     useEffect(() => {
-        const loadedKeys: Record<string, string> = {};
-        API_SERVICES.forEach(service => {
-            const val = localStorage.getItem(service.envVar) || '';
-            loadedKeys[service.envVar] = val;
-        });
-        setKeys(loadedKeys);
-        setActiveCount(getActiveServicesCount());
-    }, []);
+        const loadKeys = async () => {
+            const loadedKeys: Record<string, string> = {};
+            let count = 0;
+            for (const service of API_SERVICES) {
+                const val = await getSecureItem(service.envVar) || '';
+                loadedKeys[service.envVar] = val;
+                if (val) count++;
+            }
+            setKeys(loadedKeys);
+            setActiveCount(count);
+            setVaultStatus(count > 0 ? (isLocked ? 'SECURE' : 'UNLOCKED') : 'EMPTY');
+        };
+        loadKeys();
+    }, [isLocked]);
 
     const filteredServices = activeCategory === 'All' 
         ? API_SERVICES 
         : API_SERVICES.filter(s => s.category === activeCategory);
 
-    const handleSave = (envVar: string) => {
-        localStorage.setItem(envVar, keys[envVar]);
+    const handleSave = async (envVar: string) => {
+        await setSecureItem(envVar, keys[envVar]);
         setSaved(envVar);
-        setActiveCount(getActiveServicesCount());
+        const count = getActiveServicesCount();
+        setActiveCount(count);
+        setVaultStatus(count > 0 ? (isLocked ? 'SECURE' : 'UNLOCKED') : 'EMPTY');
         setTimeout(() => setSaved(null), 2000);
         window.dispatchEvent(new Event('storage'));
     };
 
-    const handleClear = (envVar: string) => {
-        localStorage.removeItem(envVar);
+    const handleClear = async (envVar: string) => {
+        await removeSecureItem(envVar);
         setKeys(prev => ({ ...prev, [envVar]: '' }));
-        setActiveCount(getActiveServicesCount());
+        const count = getActiveServicesCount();
+        setActiveCount(count);
+        setVaultStatus(count > 0 ? (isLocked ? 'SECURE' : 'UNLOCKED') : 'EMPTY');
         window.dispatchEvent(new Event('storage'));
+    };
+
+    const toggleVault = () => {
+        setIsLocked(!isLocked);
     };
 
     return (
         <div className="max-w-4xl mx-auto py-8 px-4">
+            {/* VAULT CONTROL CENTER */}
+            <div className="mb-12 glass-panel p-8 rounded-[2.5rem] border border-white/5 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-emerald-500/5 to-transparent pointer-events-none"></div>
+                <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
+                    <div className="flex items-center gap-6">
+                        <div className={`w-20 h-20 rounded-3xl flex items-center justify-center border-2 transition-all duration-500 ${isLocked ? 'bg-black/60 border-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.1)]' : 'bg-emerald-500/10 border-emerald-500/50 shadow-[0_0_50px_rgba(16,185,129,0.2)]'}`}>
+                            {isLocked ? <Shield className="w-10 h-10 text-emerald-500/50" /> : <Zap className="w-10 h-10 text-emerald-400 animate-pulse" />}
+                        </div>
+                        <div>
+                            <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Stratos Vault</h2>
+                            <div className="flex items-center gap-3 mt-1">
+                                <div className={`h-2 w-2 rounded-full ${vaultStatus === 'SECURE' ? 'bg-emerald-500' : vaultStatus === 'UNLOCKED' ? 'bg-blue-400' : 'bg-gray-600'}`}></div>
+                                <span className="text-[10px] font-mono text-gray-500 uppercase tracking-[0.3em]">Status: {vaultStatus}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex gap-4">
+                        <div className="text-right hidden md:block">
+                            <div className="text-[10px] font-mono text-gray-600 uppercase tracking-widest mb-1">Encryption Layer</div>
+                            <div className="text-xs font-mono text-emerald-500/70">AES-256-GCM (Browser Native)</div>
+                        </div>
+                        <button 
+                            onClick={toggleVault}
+                            className={`px-8 py-4 rounded-2xl font-black text-xs tracking-[0.2em] uppercase transition-all duration-500 flex items-center gap-3 ${isLocked ? 'bg-emerald-500 text-black hover:scale-105' : 'bg-white/5 text-white border border-white/10 hover:bg-white/10'}`}
+                        >
+                            {isLocked ? <><Key className="w-4 h-4" /> Unlock Vault</> : <><Shield className="w-4 h-4" /> Lock Vault</>}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             {/* SYNERGY DASHBOARD */}
             <div className="mb-12 grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="glass-panel p-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/5">
@@ -378,24 +426,32 @@ export const SettingsMode: React.FC = () => {
                         <div className="space-y-3">
                             <div className="relative">
                                 <input 
-                                    type="password"
-                                    value={keys[service.envVar] || ''}
-                                    onChange={(e) => setKeys(prev => ({ ...prev, [service.envVar]: e.target.value }))}
-                                    placeholder="Enter API Key..."
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-gray-700 focus:outline-none focus:border-emerald-500/50 transition-all"
+                                    type={isLocked ? "password" : "text"}
+                                    value={isLocked ? "••••••••••••••••" : (keys[service.envVar] || '')}
+                                    onChange={(e) => !isLocked && setKeys(prev => ({ ...prev, [service.envVar]: e.target.value }))}
+                                    disabled={isLocked}
+                                    placeholder={isLocked ? "Vault Locked" : "Enter API Key..."}
+                                    className={`w-full bg-black/40 border rounded-xl px-4 py-2.5 text-sm transition-all ${isLocked ? 'border-white/5 text-gray-700 cursor-not-allowed' : 'border-white/10 text-white placeholder:text-gray-700 focus:border-emerald-500/50'}`}
                                 />
+                                {isLocked && (
+                                    <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px] rounded-xl flex items-center justify-center">
+                                        <Shield className="w-4 h-4 text-emerald-500/20" />
+                                    </div>
+                                )}
                             </div>
                             
                             <div className="flex gap-2">
                                 <button 
-                                    onClick={() => handleSave(service.envVar)}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${saved === service.envVar ? 'bg-emerald-500 text-black' : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'}`}
+                                    onClick={() => !isLocked && handleSave(service.envVar)}
+                                    disabled={isLocked}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${isLocked ? 'bg-white/5 text-gray-700 cursor-not-allowed' : saved === service.envVar ? 'bg-emerald-500 text-black' : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'}`}
                                 >
                                     {saved === service.envVar ? 'Saved!' : <><Save className="w-3.5 h-3.5" /> Save Key</>}
                                 </button>
                                 <button 
-                                    onClick={() => handleClear(service.envVar)}
-                                    className="p-2 rounded-xl bg-red-500/5 hover:bg-red-500/10 text-red-400 border border-red-500/10 transition-all"
+                                    onClick={() => !isLocked && handleClear(service.envVar)}
+                                    disabled={isLocked}
+                                    className={`p-2 rounded-xl border transition-all ${isLocked ? 'bg-red-500/5 text-red-900/20 border-red-900/10 cursor-not-allowed' : 'bg-red-500/5 hover:bg-red-500/10 text-red-400 border-red-500/10'}`}
                                     title="Clear Key"
                                 >
                                     <Trash2 className="w-4 h-4" />
@@ -414,9 +470,9 @@ export const SettingsMode: React.FC = () => {
                     <div>
                         <h4 className="text-white font-bold mb-1">Security Note</h4>
                         <p className="text-sm text-gray-400 leading-relaxed">
-                            These keys are stored in your browser's <code className="text-emerald-400/80">localStorage</code>. 
-                            They are never sent to our servers. If you clear your browser data, you will need to re-enter them.
-                            For production environments, we recommend using environment variables.
+                            These keys are stored in your device's secure storage. 
+                            They are never sent to our servers. If you clear your app data, you will need to re-enter them.
+                            The Stratos Vault uses AES-256-GCM encryption for all sensitive data.
                         </p>
                     </div>
                 </div>

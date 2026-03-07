@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Brain, CloudLightning, CheckCircle, Copy, RefreshCw, Calendar, LayoutGrid, Activity, ShieldCheck, Bot } from 'lucide-react';
 import { calculateStake } from './lib/utils';
-import { getWeather, getRealOdds, getBetStackData, getBizzoPrediction, getGameForecast, getBytezAnalysis, getPlayerMetrics, getAdvancedMetrics, getUpcomingGames, getActiveServicesCount } from './lib/api';
+import { getWeather, getRealOdds, getBetStackData, getBizzoPrediction, getGameForecast, getBytezAnalysis, getPlayerMetrics, getAdvancedMetrics, getUpcomingGames, getActiveServicesCount } from './api/footballApi';
 import { predictWithModel, createAndTrainModel } from './lib/ai';
 import { initializeSpartaMatrix, runMonteCarlo } from './lib/spartaSim';
-import { footballData } from './lib/data';
+import { footballData } from './api/mockData';
 import { motion, AnimatePresence } from 'motion/react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './store/queryClient';
 import { SpartaMode } from './components/SpartaMode';
 import { UpcomingMode } from './components/UpcomingMode';
 import { SettingsMode } from './components/SettingsMode';
@@ -360,9 +362,10 @@ export default function App() {
     const successRate = totalGames > 0 ? Math.round((totalCorrect / totalGames) * 100) : 0;
 
     return (
-        <div className="bg-transparent text-gray-100 min-h-screen font-sans selection:bg-emerald-500/30 relative z-10">
-            <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-                {globalError && (
+        <QueryClientProvider client={queryClient}>
+            <div className="bg-transparent text-gray-100 min-h-screen font-sans selection:bg-emerald-500/30 relative z-10">
+                <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+                    {globalError && (
                     <motion.div 
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -550,5 +553,6 @@ export default function App() {
                 )}
             </AnimatePresence>
         </div>
+        </QueryClientProvider>
     );
 }
