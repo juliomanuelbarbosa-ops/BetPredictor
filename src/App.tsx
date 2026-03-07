@@ -228,7 +228,16 @@ export default function App() {
         setGlobalError(null);
         try {
             const matches = await getUpcomingGames();
-            setUpcomingMatches(matches);
+            
+            // Enhance matches with form and H2H data from local history
+            const enhancedMatches = matches.map(m => {
+                const homeForm = footballData.getTeamFormResults(m.home);
+                const awayForm = footballData.getTeamFormResults(m.away);
+                const h2h = footballData.getH2H(m.home, m.away);
+                return { ...m, homeForm, awayForm, h2h };
+            });
+
+            setUpcomingMatches(enhancedMatches);
             showToast(`Found ${matches.length} matches!`);
         } catch (err: any) {
             showToast("Error: " + err.message, 'error');
@@ -320,8 +329,18 @@ export default function App() {
     };
 
     const copyPrediction = (pred: any) => {
-        navigator.clipboard.writeText(`${pred.game.home} vs ${pred.game.away}: ${pred.bestBet} (${pred.confidence}%)`);
-        showToast("Copied to clipboard!");
+        const text = `
+🎯 STRATOS.AI PREDICTION
+⚽ ${pred.game.home} vs ${pred.game.away}
+🏆 ${pred.game.league}
+📈 Recommendation: ${pred.bestBet}
+🔥 Confidence: ${pred.confidence}%
+📊 Predicted Score: ${pred.predScore}
+💰 Suggested Stake: $${pred.stake}
+📝 Insight: ${pred.bytezAnalysis.report.substring(0, 100)}...
+        `.trim();
+        navigator.clipboard.writeText(text);
+        showToast("Detailed prediction copied!");
     };
 
     const clearHistory = () => {

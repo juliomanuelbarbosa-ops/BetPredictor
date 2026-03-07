@@ -209,6 +209,21 @@ class FootballDataService {
 
         return { homeWins, awayWins, draws };
     }
+
+    getTeamFormResults(team: string): string[] {
+        let teamMatches = this.matches.filter(m => 
+            m.HomeTeam.toLowerCase().includes(team.toLowerCase()) || 
+            m.AwayTeam.toLowerCase().includes(team.toLowerCase())
+        );
+        
+        const last5 = teamMatches.slice(-5);
+        return last5.map(m => {
+            const isHome = m.HomeTeam.toLowerCase().includes(team.toLowerCase());
+            if (m.FTR === 'D') return 'D';
+            if ((m.FTR === 'H' && isHome) || (m.FTR === 'A' && !isHome)) return 'W';
+            return 'L';
+        });
+    }
 }
 
 export const footballData = new FootballDataService();
