@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Brain, CloudLightning, CheckCircle, Copy, RefreshCw, Calendar } from 'lucide-react';
+import { Brain, CloudLightning, CheckCircle, Copy, RefreshCw, Calendar, LayoutGrid, Activity, ShieldCheck, Bot } from 'lucide-react';
 import { calculateStake } from './lib/utils';
 import { getWeather, getRealOdds, getBetStackData, getBizzoPrediction, getGameForecast, getBytezAnalysis, getPlayerMetrics, getAdvancedMetrics, getUpcomingGames, getActiveServicesCount } from './lib/api';
 import { predictWithModel, createAndTrainModel } from './lib/ai';
@@ -10,7 +10,7 @@ import { SpartaMode } from './components/SpartaMode';
 import { UpcomingMode } from './components/UpcomingMode';
 import { SettingsMode } from './components/SettingsMode';
 import { PerformanceMode } from './components/PerformanceMode';
-import { LayoutGrid, Activity, ShieldCheck } from 'lucide-react';
+import { IntelligenceMode } from './components/IntelligenceMode';
 import { SpartaLogo } from './components/SpartaLogo';
 
 const leagueMap: Record<string, { oddsKey: string }> = {
@@ -122,7 +122,7 @@ export default function App() {
         showToast("Prediction deleted");
     };
 
-    const [mode, setMode] = useState<'SPARTA' | 'UPCOMING' | 'SETTINGS' | 'PERFORMANCE'>('UPCOMING');
+    const [mode, setMode] = useState<'SPARTA' | 'UPCOMING' | 'SETTINGS' | 'PERFORMANCE' | 'INTELLIGENCE'>('UPCOMING');
     const [upcomingMatches, setUpcomingMatches] = useState<any[]>([]);
 
     useEffect(() => {
@@ -442,6 +442,7 @@ export default function App() {
                         {[
                             { id: 'SPARTA', label: 'SPARTA LOGIC', icon: SpartaLogo },
                             { id: 'UPCOMING', label: 'LIVE & UPCOMING', icon: Calendar },
+                            { id: 'INTELLIGENCE', label: 'AI AGENTS', icon: Bot },
                             { id: 'PERFORMANCE', label: 'PERFORMANCE', icon: Activity },
                             { id: 'SETTINGS', label: 'API SETTINGS', icon: ShieldCheck }
                         ].map((item) => (
@@ -513,6 +514,7 @@ export default function App() {
                         )}
                         {mode === 'SETTINGS' && <SettingsMode />}
                         {mode === 'PERFORMANCE' && <PerformanceMode predictions={predictions} bankroll={bankroll} />}
+                        {mode === 'INTELLIGENCE' && <IntelligenceMode />}
                     </motion.div>
                 </AnimatePresence>
 
