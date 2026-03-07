@@ -1,5 +1,6 @@
-import React, { useRef } from 'react';
-import { UploadCloud } from 'lucide-react';
+import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Cpu, Zap, Activity, Shield, RefreshCw, ChevronRight, Binary, Database } from 'lucide-react';
 
 interface SpartaModeProps {
     phase: 'STRATOS' | 'COMBAT';
@@ -11,12 +12,6 @@ interface SpartaModeProps {
     stratosResult: any;
     spartaMatrix: any;
     combatResult: any;
-    lineupAnalysis: any;
-    isDragging: boolean;
-    handleDragOver: (e: React.DragEvent) => void;
-    handleDragLeave: (e: React.DragEvent) => void;
-    handleDrop: (e: React.DragEvent) => void;
-    handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     resetSparta: () => void;
 }
 
@@ -30,265 +25,209 @@ export function SpartaMode({
     stratosResult,
     spartaMatrix,
     combatResult,
-    lineupAnalysis,
-    isDragging,
-    handleDragOver,
-    handleDragLeave,
-    handleDrop,
-    handleFileChange,
     resetSparta
 }: SpartaModeProps) {
-    const fileInputRef = useRef<HTMLInputElement>(null);
-
     return (
-        <section className="glass-card rounded-[2rem] p-8 sm:p-12 mb-12 relative z-10">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent"></div>
-            <div className="flex flex-col items-center gap-10">
-                {/* STRATOS PHASE */}
-                <div className="w-full max-w-3xl">
-                    <div className="flex items-center gap-4 mb-8">
-                        <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
-                            <span className="text-emerald-400 font-mono font-bold text-lg">1</span>
+        <section className="max-w-5xl mx-auto py-8 px-4">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* LEFT PANEL: INPUT & MATRIX */}
+                <div className="lg:col-span-5 space-y-6">
+                    <div className="glass-panel p-8 rounded-3xl border border-white/5 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-4 opacity-10">
+                            <Binary className="w-24 h-24 text-emerald-400" />
                         </div>
-                        <h2 className="text-3xl font-extrabold text-white tracking-tight">Phase 1: Stratos <span className="text-emerald-500/60 font-mono text-sm ml-3 tracking-widest uppercase">T-24h</span></h2>
-                    </div>
-                    
-                    <div className="flex flex-col sm:flex-row gap-4 mb-10">
-                        <input 
-                            type="text" 
-                            placeholder="Enter Match (e.g., Arsenal vs Chelsea)" 
-                            className="flex-1 bg-black/60 border border-white/10 rounded-2xl px-6 py-4 text-white focus:outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 transition-all font-mono text-sm shadow-inner"
-                            value={matchInput}
-                            onChange={(e) => setMatchInput(e.target.value)}
-                            disabled={isLoading || phase === 'COMBAT'}
-                        />
-                        <button 
-                            onClick={initializeStratos}
-                            disabled={isLoading || phase === 'COMBAT'}
-                            className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white px-10 py-4 rounded-2xl font-bold tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] transform hover:-translate-y-0.5"
-                        >
-                            INIT MATRIX
-                        </button>
-                    </div>
-                    
-                    {stratosResult && (
-                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            <div className="bg-black/40 border border-white/5 rounded-2xl p-6">
-                                <h3 className="text-sm font-mono text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                    Baseline Monte Carlo Results
-                                </h3>
-                                <div className="grid grid-cols-3 gap-4 text-center mb-8">
-                                    <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                                        <div className="text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">Home Win</div>
-                                        <div className="text-3xl font-bold text-emerald-400">{stratosResult.homeWins.toFixed(1)}%</div>
-                                    </div>
-                                    <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                                        <div className="text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">Draw</div>
-                                        <div className="text-3xl font-bold text-gray-300">{stratosResult.draws.toFixed(1)}%</div>
-                                    </div>
-                                    <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                                        <div className="text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">Away Win</div>
-                                        <div className="text-3xl font-bold text-emerald-400">{stratosResult.awayWins.toFixed(1)}%</div>
-                                    </div>
-                                </div>
-                                
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center border-t border-white/5 pt-6">
-                                    <div>
-                                        <div className="text-xs font-mono text-gray-500 uppercase tracking-wider mb-1">Over 2.5</div>
-                                        <div className="text-xl font-semibold text-gray-200">{stratosResult.over25.toFixed(1)}%</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-xs font-mono text-gray-500 uppercase tracking-wider mb-1">Under 2.5</div>
-                                        <div className="text-xl font-semibold text-gray-200">{stratosResult.under25.toFixed(1)}%</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-xs font-mono text-gray-500 uppercase tracking-wider mb-1">BTTS (Yes)</div>
-                                        <div className="text-xl font-semibold text-gray-200">{stratosResult.btts.toFixed(1)}%</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-xs font-mono text-gray-500 uppercase tracking-wider mb-1">Most Likely</div>
-                                        <div className="text-xl font-semibold text-emerald-400">{stratosResult.mostLikelyScore}</div>
-                                    </div>
+                        
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+                                <Cpu className="w-5 h-5" />
+                            </div>
+                            <h2 className="text-xl font-bold text-white tracking-tight">Sparta Matrix <span className="text-[10px] font-mono text-emerald-500/50 ml-2 uppercase tracking-widest">v4.2</span></h2>
+                        </div>
+
+                        <div className="space-y-4 mb-8">
+                            <div className="relative">
+                                <input 
+                                    type="text" 
+                                    placeholder="HOME VS AWAY" 
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-6 py-4 text-white focus:outline-none focus:border-emerald-500/50 transition-all font-mono text-sm uppercase tracking-widest placeholder:text-gray-700"
+                                    value={matchInput}
+                                    onChange={(e) => setMatchInput(e.target.value)}
+                                    disabled={isLoading || phase === 'COMBAT'}
+                                />
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-1">
+                                    <div className="w-1 h-1 rounded-full bg-emerald-500/30"></div>
+                                    <div className="w-1 h-1 rounded-full bg-emerald-500/30"></div>
                                 </div>
                             </div>
+                            
+                            <button 
+                                onClick={initializeStratos}
+                                disabled={isLoading || phase === 'COMBAT'}
+                                className="w-full bg-emerald-500 text-black py-4 rounded-xl font-black tracking-[0.2em] transition-all disabled:opacity-30 disabled:grayscale hover:bg-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.2)] flex items-center justify-center gap-3 uppercase text-xs"
+                            >
+                                {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                                Initialize Protocol
+                            </button>
+                        </div>
 
+                        <AnimatePresence>
                             {spartaMatrix && (
-                                <div className="bg-black/20 border border-white/5 rounded-2xl p-6">
-                                    <h3 className="text-xs font-mono text-gray-500 uppercase tracking-widest mb-4">Sparta Matrix Variables (Sample)</h3>
-                                    <div className="grid grid-cols-2 gap-8">
-                                        <div>
-                                            <div className="font-mono text-sm text-emerald-400 mb-3 border-b border-white/10 pb-2">HOME_TEAM</div>
-                                            <div className="space-y-2 text-xs font-mono text-gray-400">
-                                                <div className="flex justify-between"><span>xG_base:</span> <span className="text-gray-200">{spartaMatrix.home.xG_base.toFixed(2)}</span></div>
-                                                <div className="flex justify-between"><span>field_tilt:</span> <span className="text-gray-200">{spartaMatrix.home.field_tilt.toFixed(1)}%</span></div>
-                                                <div className="flex justify-between"><span>save_pct:</span> <span className="text-gray-200">{spartaMatrix.home.save_pct.toFixed(1)}%</span></div>
-                                                <div className="flex justify-between"><span>ppda:</span> <span className="text-gray-200">{spartaMatrix.home.ppda.toFixed(1)}</span></div>
+                                <motion.div 
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    className="pt-6 border-t border-white/5 space-y-6"
+                                >
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-2 text-[10px] font-mono text-emerald-500/70 uppercase tracking-widest">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                                                Home Vector
+                                            </div>
+                                            <div className="space-y-2 bg-black/20 p-3 rounded-lg border border-white/5">
+                                                <div className="flex justify-between text-[10px] font-mono">
+                                                    <span className="text-gray-500">xG_BASE:</span>
+                                                    <span className="text-white">{spartaMatrix.home.xG_base.toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between text-[10px] font-mono">
+                                                    <span className="text-gray-500">TILT_F:</span>
+                                                    <span className="text-white">{spartaMatrix.home.field_tilt.toFixed(1)}%</span>
+                                                </div>
+                                                <div className="flex justify-between text-[10px] font-mono">
+                                                    <span className="text-gray-500">PPDA_V:</span>
+                                                    <span className="text-white">{spartaMatrix.home.ppda.toFixed(1)}</span>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div>
-                                            <div className="font-mono text-sm text-emerald-400 mb-3 border-b border-white/10 pb-2">AWAY_TEAM</div>
-                                            <div className="space-y-2 text-xs font-mono text-gray-400">
-                                                <div className="flex justify-between"><span>xG_base:</span> <span className="text-gray-200">{spartaMatrix.away.xG_base.toFixed(2)}</span></div>
-                                                <div className="flex justify-between"><span>field_tilt:</span> <span className="text-gray-200">{spartaMatrix.away.field_tilt.toFixed(1)}%</span></div>
-                                                <div className="flex justify-between"><span>save_pct:</span> <span className="text-gray-200">{spartaMatrix.away.save_pct.toFixed(1)}%</span></div>
-                                                <div className="flex justify-between"><span>ppda:</span> <span className="text-gray-200">{spartaMatrix.away.ppda.toFixed(1)}</span></div>
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-2 text-[10px] font-mono text-blue-500/70 uppercase tracking-widest">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                                                Away Vector
+                                            </div>
+                                            <div className="space-y-2 bg-black/20 p-3 rounded-lg border border-white/5">
+                                                <div className="flex justify-between text-[10px] font-mono">
+                                                    <span className="text-gray-500">xG_BASE:</span>
+                                                    <span className="text-white">{spartaMatrix.away.xG_base.toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between text-[10px] font-mono">
+                                                    <span className="text-gray-500">TILT_F:</span>
+                                                    <span className="text-white">{spartaMatrix.away.field_tilt.toFixed(1)}%</span>
+                                                </div>
+                                                <div className="flex justify-between text-[10px] font-mono">
+                                                    <span className="text-gray-500">PPDA_V:</span>
+                                                    <span className="text-white">{spartaMatrix.away.ppda.toFixed(1)}</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                    <div className="bg-emerald-500/5 border border-emerald-500/10 p-4 rounded-xl flex items-center gap-4">
+                                        <Database className="w-5 h-5 text-emerald-400 opacity-50" />
+                                        <div>
+                                            <p className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest">Matrix Status</p>
+                                            <p className="text-[10px] text-gray-500 font-mono">300+ VARIABLES SYNCHRONIZED</p>
+                                        </div>
+                                    </div>
+                                </motion.div>
                             )}
+                        </AnimatePresence>
+                    </div>
+
+                    {isLoading && (
+                        <div className="glass-panel p-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full border-2 border-emerald-500/20 border-t-emerald-500 animate-spin"></div>
+                            <div>
+                                <p className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest animate-pulse">Processing</p>
+                                <p className="text-xs text-white font-medium">{loadingStep}</p>
+                            </div>
                         </div>
                     )}
                 </div>
 
-                {/* COMBAT PHASE */}
-                {spartaMatrix && (
-                    <div className="w-full max-w-3xl border-t border-white/10 pt-12 mt-4 animate-in fade-in duration-700">
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
-                                <span className="text-emerald-400 font-mono font-bold text-lg">2</span>
-                            </div>
-                            <h2 className="text-3xl font-extrabold text-white tracking-tight">Phase 2: Combat <span className="text-emerald-500/60 font-mono text-sm ml-3 tracking-widest uppercase">T-60m</span></h2>
-                        </div>
-                        <p className="text-gray-400 mb-8 text-sm leading-relaxed">Upload a SofaScore or FlashScore lineup screenshot to extract Starting XI and apply FM Penalty Logic.</p>
-                        
-                        <div 
-                            onClick={() => !isLoading && fileInputRef.current?.click()}
-                            onDragOver={handleDragOver}
-                            onDragLeave={handleDragLeave}
-                            onDrop={handleDrop}
-                            className={`w-full h-64 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center transition-all duration-500 ${
-                                isDragging 
-                                    ? 'border-emerald-400 bg-emerald-500/10 scale-[1.02] shadow-[0_0_30px_rgba(16,185,129,0.2)]' 
-                                    : isLoading 
-                                        ? 'border-emerald-500/20 bg-black/60 cursor-wait' 
-                                        : 'border-white/10 cursor-pointer hover:border-emerald-500/40 hover:bg-white/5'
-                            }`}
-                        >
-                            {isLoading ? (
-                                <div className="flex flex-col items-center">
-                                    <div className="w-14 h-14 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mb-6"></div>
-                                    <p className="text-lg text-emerald-400 font-mono tracking-widest uppercase animate-pulse">{loadingStep}</p>
+                {/* RIGHT PANEL: SIMULATION RESULTS */}
+                <div className="lg:col-span-7">
+                    <AnimatePresence mode="wait">
+                        {!stratosResult ? (
+                            <motion.div 
+                                key="empty"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="h-full min-h-[400px] glass-panel rounded-3xl border border-white/5 border-dashed flex flex-col items-center justify-center text-center p-12"
+                            >
+                                <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6">
+                                    <Binary className="w-10 h-10 text-gray-700" />
                                 </div>
-                            ) : (
-                                <>
-                                    <UploadCloud className={`w-14 h-14 mb-6 transition-colors duration-500 ${isDragging ? 'text-emerald-400 scale-110' : 'text-gray-500/70'}`} />
-                                    <p className="text-xl text-gray-300 font-medium tracking-tight mb-2">{isDragging ? 'Drop lineup here!' : 'Drop lineup screenshot here'}</p>
-                                    <p className="text-gray-500 font-mono text-sm">or click to browse</p>
-                                </>
-                            )}
-                        </div>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleFileChange}
-                            disabled={isLoading}
-                        />
-                        
-                        {combatResult && lineupAnalysis && (
-                            <div className="mt-10 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                <div className="bg-red-950/30 border border-red-900/50 rounded-2xl p-6">
-                                    <h3 className="text-sm font-mono text-red-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                                        FM Penalty Logic Applied
-                                    </h3>
-                                    <ul className="text-sm text-gray-300 space-y-2 font-mono list-none">
-                                        <li className="flex items-center gap-2"><span className="text-gray-500">›</span> Home Formation: <span className="text-white">{lineupAnalysis.homeFormation}</span></li>
-                                        <li className="flex items-center gap-2"><span className="text-gray-500">›</span> Away Formation: <span className="text-white">{lineupAnalysis.awayFormation}</span></li>
-                                        {lineupAnalysis.homeMissingATier > 0 && <li className="flex items-center gap-2 text-red-300"><span className="text-red-500">⚠</span> Home missing {lineupAnalysis.homeMissingATier} A-Tier players (-{lineupAnalysis.homeMissingATier * 15}% efficiency)</li>}
-                                        {lineupAnalysis.awayMissingATier > 0 && <li className="flex items-center gap-2 text-red-300"><span className="text-red-500">⚠</span> Away missing {lineupAnalysis.awayMissingATier} A-Tier players (-{lineupAnalysis.awayMissingATier * 15}% efficiency)</li>}
-                                        <li className="flex items-center gap-2"><span className="text-gray-500">›</span> Game Changers on Bench: <span className="text-emerald-400">{lineupAnalysis.gameChangers.join(', ') || 'None identified'}</span></li>
-                                    </ul>
-                                </div>
-                                
-                                <div className="bg-emerald-950/20 border border-emerald-900/50 rounded-2xl p-6 shadow-[0_0_30px_rgba(16,185,129,0.05)]">
-                                    <h3 className="text-sm font-mono text-emerald-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                        Final Combat Results
-                                    </h3>
-                                    <div className="grid grid-cols-3 gap-4 text-center mb-8">
-                                        <div className="bg-black/40 rounded-xl p-4 border border-emerald-900/30">
-                                            <div className="text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">Home Win</div>
-                                            <div className="text-3xl font-bold text-emerald-400">{combatResult.homeWins.toFixed(1)}%</div>
-                                            <div className="text-xs font-mono text-gray-500 mt-1">vs {stratosResult.homeWins.toFixed(1)}%</div>
-                                        </div>
-                                        <div className="bg-black/40 rounded-xl p-4 border border-emerald-900/30">
-                                            <div className="text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">Draw</div>
-                                            <div className="text-3xl font-bold text-gray-300">{combatResult.draws.toFixed(1)}%</div>
-                                            <div className="text-xs font-mono text-gray-500 mt-1">vs {stratosResult.draws.toFixed(1)}%</div>
-                                        </div>
-                                        <div className="bg-black/40 rounded-xl p-4 border border-emerald-900/30">
-                                            <div className="text-xs font-mono text-gray-500 uppercase tracking-wider mb-2">Away Win</div>
-                                            <div className="text-3xl font-bold text-emerald-400">{combatResult.awayWins.toFixed(1)}%</div>
-                                            <div className="text-xs font-mono text-gray-500 mt-1">vs {stratosResult.awayWins.toFixed(1)}%</div>
-                                        </div>
+                                <h3 className="text-gray-500 font-mono text-xs uppercase tracking-[0.3em] mb-2">Awaiting Initialization</h3>
+                                <p className="text-gray-700 text-xs max-w-xs leading-relaxed">Enter match parameters and initialize the Sparta protocol to begin Monte Carlo simulation.</p>
+                            </motion.div>
+                        ) : (
+                            <motion.div 
+                                key="results"
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="space-y-6"
+                            >
+                                <div className="glass-panel p-8 rounded-3xl border border-white/5">
+                                    <div className="flex items-center justify-between mb-8">
+                                        <h3 className="text-white font-bold text-lg flex items-center gap-3">
+                                            <Activity className="w-5 h-5 text-emerald-400" />
+                                            Simulation Output
+                                        </h3>
+                                        <span className="text-[10px] font-mono text-gray-500 bg-white/5 px-3 py-1 rounded-full uppercase tracking-widest">10,000 Iterations</span>
                                     </div>
-                                    
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center border-t border-emerald-900/30 pt-6">
-                                        <div>
-                                            <div className="text-xs font-mono text-gray-500 uppercase tracking-wider mb-1">Over 2.5</div>
-                                            <div className="text-xl font-semibold text-emerald-300">{combatResult.over25.toFixed(1)}%</div>
-                                            <div className="text-xs font-mono text-gray-500 mt-1">vs {stratosResult.over25.toFixed(1)}%</div>
-                                        </div>
-                                        <div>
-                                            <div className="text-xs font-mono text-gray-500 uppercase tracking-wider mb-1">Under 2.5</div>
-                                            <div className="text-xl font-semibold text-emerald-300">{combatResult.under25.toFixed(1)}%</div>
-                                            <div className="text-xs font-mono text-gray-500 mt-1">vs {stratosResult.under25.toFixed(1)}%</div>
-                                        </div>
-                                        <div>
-                                            <div className="text-xs font-mono text-gray-500 uppercase tracking-wider mb-1">BTTS (Yes)</div>
-                                            <div className="text-xl font-semibold text-emerald-300">{combatResult.btts.toFixed(1)}%</div>
-                                            <div className="text-xs font-mono text-gray-500 mt-1">vs {stratosResult.btts.toFixed(1)}%</div>
-                                        </div>
-                                        <div>
-                                            <div className="text-xs font-mono text-gray-500 uppercase tracking-wider mb-1">Most Likely</div>
-                                            <div className="text-xl font-semibold text-emerald-400">{combatResult.mostLikelyScore}</div>
-                                            <div className="text-xs font-mono text-gray-500 mt-1">vs {stratosResult.mostLikelyScore}</div>
-                                        </div>
+
+                                    <div className="grid grid-cols-3 gap-6 mb-10">
+                                        {[
+                                            { label: 'Home Win', value: stratosResult.homeWins, color: 'text-emerald-400' },
+                                            { label: 'Draw', value: stratosResult.draws, color: 'text-gray-400' },
+                                            { label: 'Away Win', value: stratosResult.awayWins, color: 'text-blue-400' }
+                                        ].map((res, i) => (
+                                            <div key={i} className="bg-black/40 p-6 rounded-2xl border border-white/5 text-center relative overflow-hidden group">
+                                                <div className="absolute bottom-0 left-0 h-1 bg-current opacity-20 transition-all duration-1000" style={{ width: `${res.value}%`, color: res.color.replace('text-', '') }}></div>
+                                                <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-2">{res.label}</p>
+                                                <p className={`text-4xl font-mono font-bold ${res.color}`}>{res.value.toFixed(1)}%</p>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-8 border-t border-white/5">
+                                        {[
+                                            { label: 'Over 2.5', value: stratosResult.over25 },
+                                            { label: 'Under 2.5', value: stratosResult.under25 },
+                                            { label: 'BTTS (Yes)', value: stratosResult.btts },
+                                            { label: 'Most Likely', value: stratosResult.mostLikelyScore, isScore: true }
+                                        ].map((stat, i) => (
+                                            <div key={i} className="text-center">
+                                                <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1">{stat.label}</p>
+                                                <p className={`text-lg font-mono font-bold ${stat.isScore ? 'text-emerald-400' : 'text-white'}`}>
+                                                    {typeof stat.value === 'number' ? `${stat.value.toFixed(1)}%` : stat.value}
+                                                </p>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
 
-                                {spartaMatrix && (
-                                    <div className="bg-black/20 border border-white/5 rounded-2xl p-6">
-                                        <h3 className="text-xs font-mono text-gray-500 uppercase tracking-widest mb-4">Adjusted Sparta Matrix Variables</h3>
-                                        <div className="grid grid-cols-2 gap-8">
-                                            <div>
-                                                <div className="font-mono text-sm text-emerald-400 mb-3 border-b border-white/10 pb-2">HOME_TEAM</div>
-                                                <div className="space-y-2 text-xs font-mono text-gray-400">
-                                                    <div className="flex justify-between"><span>xG_base:</span> <span className="text-gray-200">{spartaMatrix.home.xG_base.toFixed(2)}</span></div>
-                                                    <div className="flex justify-between"><span>field_tilt:</span> <span className="text-gray-200">{spartaMatrix.home.field_tilt.toFixed(1)}%</span></div>
-                                                    <div className="flex justify-between"><span>save_pct:</span> <span className="text-gray-200">{spartaMatrix.home.save_pct.toFixed(1)}%</span></div>
-                                                    <div className="flex justify-between"><span>ppda:</span> <span className="text-gray-200">{spartaMatrix.home.ppda.toFixed(1)}</span></div>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <div className="font-mono text-sm text-emerald-400 mb-3 border-b border-white/10 pb-2">AWAY_TEAM</div>
-                                                <div className="space-y-2 text-xs font-mono text-gray-400">
-                                                    <div className="flex justify-between"><span>xG_base:</span> <span className="text-gray-200">{spartaMatrix.away.xG_base.toFixed(2)}</span></div>
-                                                    <div className="flex justify-between"><span>field_tilt:</span> <span className="text-gray-200">{spartaMatrix.away.field_tilt.toFixed(1)}%</span></div>
-                                                    <div className="flex justify-between"><span>save_pct:</span> <span className="text-gray-200">{spartaMatrix.away.save_pct.toFixed(1)}%</span></div>
-                                                    <div className="flex justify-between"><span>ppda:</span> <span className="text-gray-200">{spartaMatrix.away.ppda.toFixed(1)}</span></div>
-                                                </div>
-                                            </div>
+                                <div className="glass-panel p-8 rounded-3xl border border-emerald-500/20 bg-emerald-500/5">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <div className="flex items-center gap-3">
+                                            <Shield className="w-5 h-5 text-emerald-400" />
+                                            <h3 className="text-white font-bold text-sm uppercase tracking-widest">Combat Phase Ready</h3>
                                         </div>
+                                        <button 
+                                            onClick={resetSparta}
+                                            className="text-[10px] font-mono text-gray-500 hover:text-white transition-colors uppercase tracking-widest"
+                                        >
+                                            Reset Sim
+                                        </button>
                                     </div>
-                                )}
-                                
-                                <div className="flex justify-center mt-8">
-                                    <button 
-                                        onClick={resetSparta}
-                                        className="bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 px-8 py-3 rounded-xl font-mono text-sm tracking-widest transition-colors"
-                                    >
-                                        RESET SIMULATION
+                                    <p className="text-xs text-gray-400 leading-relaxed mb-6">The Stratos baseline is complete. You can now proceed to the Combat phase for final lineup adjustments and real-time variable injection.</p>
+                                    <button className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white py-4 rounded-xl font-bold tracking-[0.2em] transition-all flex items-center justify-center gap-3 uppercase text-[10px]">
+                                        Initialize Combat Sequence
+                                        <ChevronRight className="w-4 h-4" />
                                     </button>
                                 </div>
-                            </div>
+                            </motion.div>
                         )}
-                    </div>
-                )}
+                    </AnimatePresence>
+                </div>
             </div>
         </section>
     );

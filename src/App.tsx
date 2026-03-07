@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Brain, CloudLightning, CheckCircle, Copy, UploadCloud } from 'lucide-react';
-import { recognizeText } from './lib/ocr';
+import { Brain, CloudLightning, CheckCircle, Copy, RefreshCw, Calendar } from 'lucide-react';
 import { calculateStake } from './lib/utils';
-import { getWeather, getRealOdds, getBetStackData, getBizzoPrediction, getGameForecast, getBytezAnalysis, getPlayerMetrics, getAdvancedMetrics } from './lib/api';
+import { getWeather, getRealOdds, getBetStackData, getBizzoPrediction, getGameForecast, getBytezAnalysis, getPlayerMetrics, getAdvancedMetrics, getUpcomingGames } from './lib/api';
 import { predictWithModel, createAndTrainModel } from './lib/ai';
-import { initializeSpartaMatrix, runMonteCarlo, applyCombatPenalties, analyzeLineupScreenshot } from './lib/spartaSim';
+import { initializeSpartaMatrix, runMonteCarlo } from './lib/spartaSim';
 import { footballData } from './lib/data';
 import { motion, AnimatePresence } from 'motion/react';
 import { SpartaMode } from './components/SpartaMode';
-import { BatchMode } from './components/BatchMode';
+import { UpcomingMode } from './components/UpcomingMode';
+import { SettingsMode } from './components/SettingsMode';
+import { PerformanceMode } from './components/PerformanceMode';
+import { LayoutGrid, Activity, ShieldCheck } from 'lucide-react';
 
 const leagueMap: Record<string, { oddsKey: string }> = {
     "premier league": {oddsKey: "soccer_epl"},
@@ -34,19 +36,17 @@ export default function App() {
     const [predictions, setPredictions] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [loadingStep, setLoadingStep] = useState<string>("");
-    const [isDragging, setIsDragging] = useState(false);
     const [toast, setToast] = useState<string | null>(null);
     const [globalError, setGlobalError] = useState<string | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [phase, setPhase] = useState<'STRATOS' | 'COMBAT'>('STRATOS');
     const [matchInput, setMatchInput] = useState("");
     const [spartaMatrix, setSpartaMatrix] = useState<any>(null);
     const [stratosResult, setStratosResult] = useState<any>(null);
     const [combatResult, setCombatResult] = useState<any>(null);
-    const [lineupAnalysis, setLineupAnalysis] = useState<any>(null);
 
-    const [mode, setMode] = useState<'SPARTA' | 'BATCH'>('SPARTA');
+    const [mode, setMode] = useState<'SPARTA' | 'UPCOMING' | 'SETTINGS' | 'PERFORMANCE'>('UPCOMING');
+    const [upcomingMatches, setUpcomingMatches] = useState<any[]>([]);
 
     useEffect(() => {
         const handleError = (e: ErrorEvent) => {
@@ -107,7 +107,7 @@ export default function App() {
             const result = runMonteCarlo(matrix, 10000);
             setStratosResult(result);
             setPhase('STRATOS');
-            showToast("Stratos Phase Complete. Awaiting Lineup Screenshot.");
+            showToast("Stratos Phase Complete.");
         } catch (err: any) {
             showToast("Error: " + err.message);
             setGlobalError(err.message);
@@ -116,153 +116,97 @@ export default function App() {
         }
     };
 
-    const processLineupScreenshot = async (file: File) => {
-        if (!spartaMatrix) {
-            showToast("Please initialize Stratos phase first.");
-            return;
-        }
-        
+    const fetchUpcoming = async () => {
         setIsLoading(true);
-        setLoadingStep("Extracting Starting XI from SofaScore/FlashScore...");
+        setLoadingStep("Fetching live and upcoming games for the next 24h...");
         setGlobalError(null);
-
         try {
-            const analysis = await analyzeLineupScreenshot(file);
-            setLineupAnalysis(analysis);
-            
-            setLoadingStep("Applying FM Penalty Logic for missing A-Tier players...");
-            const updatedMatrix = applyCombatPenalties(spartaMatrix, analysis);
-            setSpartaMatrix(updatedMatrix);
-            
-            setLoadingStep("Re-running 10,000-iteration simulation with Combat constraints...");
-            // Simulate a short delay for UI
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            const result = runMonteCarlo(updatedMatrix, 10000);
-            setCombatResult(result);
-            
-            setPhase('COMBAT');
-            showToast("Combat Phase Complete! Final predictions ready.");
+            const matches = await getUpcomingGames();
+            setUpcomingMatches(matches);
+            showToast(`Found ${matches.length} matches!`);
         } catch (err: any) {
             showToast("Error: " + err.message);
             setGlobalError(err.message);
-            console.error(err);
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        e.target.value = '';
-        if (mode === 'SPARTA' && spartaMatrix) {
-            await processLineupScreenshot(file);
-        } else if (mode === 'BATCH') {
-            await processFile(file);
+    useEffect(() => {
+        if (mode === 'UPCOMING' && upcomingMatches.length === 0) {
+            fetchUpcoming();
         }
-    };
+    }, [mode]);
 
-    const processFile = async (file: File) => {
+    const analyzeMatch = async (match: any) => {
         setIsLoading(true);
-        setLoadingStep("Extracting matches from screenshot...");
-        setPredictions([]);
-        setGlobalError(null);
-
+        setLoadingStep(`Analyzing ${match.home} vs ${match.away}...`);
         try {
-            const games = await recognizeText(file);
+            const city = cityMap[match.home] || "London";
+            const weather = await getWeather(city);
+            const odds = { avgH: match.oddsH, avgD: match.oddsD, avgA: match.oddsA };
+            const betstack = await getBetStackData(match.league);
             
-            if (!games || games.length === 0) {
-                throw new Error("No matches found in image.");
-            }
+            setLoadingStep(`Generating tactical insight for ${match.home} vs ${match.away}...`);
+            const bytezAnalysis = await getBytezAnalysis(match.home, match.away, weather, odds, betstack);
 
-            let league = 'soccer_epl';
-            const firstGameText = (games[0].home + " " + games[0].away).toLowerCase();
-            for (let k in leagueMap) {
-                if (firstGameText.includes(k)) {
-                    league = leagueMap[k].oddsKey;
-                    break;
-                }
-            }
-
-            const newPredictions = [];
+            const homeForm = footballData.getTeamForm(match.home);
+            const awayForm = footballData.getTeamForm(match.away);
+            const h2h = footballData.getH2H(match.home, match.away);
             
-            // Ensure historical data is loaded before processing
+            const homePlayerMetrics = await getPlayerMetrics(match.home);
+            const awayPlayerMetrics = await getPlayerMetrics(match.away);
+            
+            const homeAdv = await getAdvancedMetrics(match.home);
+            const awayAdv = await getAdvancedMetrics(match.away);
+
             await createAndTrainModel((msg) => setLoadingStep(msg));
 
-            for (let i = 0; i < games.length; i++) {
-                const game = games[i];
-                setLoadingStep(`Analyzing match ${i + 1} of ${games.length}: ${game.home} vs ${game.away}...`);
-                const city = cityMap[game.home] || "London";
-                const weather = await getWeather(city);
-                const odds = await getRealOdds(game.home, game.away, league);
-                const betstack = await getBetStackData(league);
-                const bizzo = await getBizzoPrediction(game.home, game.away);
-                const forecast = await getGameForecast();
-                
-                setLoadingStep(`Generating tactical insight for ${game.home} vs ${game.away}...`);
-                const bytezAnalysis = await getBytezAnalysis(game.home, game.away, weather, odds, betstack);
+            const features = [
+                match.oddsH || 2.5, 
+                match.oddsD || 3.5, 
+                match.oddsA || 3.5,
+                homeForm.pts, awayForm.pts,
+                homeForm.gs, awayForm.gs,
+                homeForm.gc, awayForm.gc,
+                homeForm.sot, awayForm.sot,
+                h2h.homeWins, h2h.awayWins, h2h.draws,
+                1, 
+                homePlayerMetrics.keyPlayerForm,
+                homePlayerMetrics.injuryImpact,
+                homePlayerMetrics.disciplineImpact,
+                awayPlayerMetrics.keyPlayerForm,
+                awayPlayerMetrics.injuryImpact,
+                awayPlayerMetrics.disciplineImpact,
+                parseFloat(homeAdv.xG), parseFloat(awayAdv.xG),
+                parseFloat(homeAdv.PPDA), parseFloat(awayAdv.PPDA),
+                parseFloat(homeAdv.Field_Tilt), parseFloat(awayAdv.Field_Tilt),
+                parseFloat(homeAdv.Clean_Sheet_Probability), parseFloat(awayAdv.Clean_Sheet_Probability),
+                Number(homeAdv.Rest_Days), Number(awayAdv.Rest_Days)
+            ];
 
-                // Fetch real historical form and H2H data
-                const homeForm = footballData.getTeamForm(game.home);
-                const awayForm = footballData.getTeamForm(game.away);
-                const h2h = footballData.getH2H(game.home, game.away);
-                
-                // Fetch player metrics
-                const homePlayerMetrics = await getPlayerMetrics(game.home);
-                const awayPlayerMetrics = await getPlayerMetrics(game.away);
-                
-                // Fetch advanced metrics
-                const homeAdv = await getAdvancedMetrics(game.home);
-                const awayAdv = await getAdvancedMetrics(game.away);
+            const probs = await predictWithModel(features);
+            const bestIndex = probs.indexOf(Math.max(...probs));
+            const labels = ["HOME WIN", "DRAW", "AWAY WIN"];
+            const bestBet = labels[bestIndex];
+            const confidence = Math.round(probs[bestIndex] * 100);
 
-                const features = [
-                    game.oddsH || odds.avgH || 2.5, 
-                    game.oddsD || odds.avgD || 3.5, 
-                    game.oddsA || odds.avgA || 3.5,
-                    homeForm.pts, awayForm.pts,
-                    homeForm.gs, awayForm.gs,
-                    homeForm.gc, awayForm.gc,
-                    homeForm.sot, awayForm.sot,
-                    h2h.homeWins, h2h.awayWins, h2h.draws,
-                    1, // Home advantage
-                    homePlayerMetrics.keyPlayerForm,
-                    homePlayerMetrics.injuryImpact,
-                    homePlayerMetrics.disciplineImpact,
-                    awayPlayerMetrics.keyPlayerForm,
-                    awayPlayerMetrics.injuryImpact,
-                    awayPlayerMetrics.disciplineImpact,
-                    parseFloat(homeAdv.xG), parseFloat(awayAdv.xG),
-                    parseFloat(homeAdv.PPDA), parseFloat(awayAdv.PPDA),
-                    parseFloat(homeAdv.Field_Tilt), parseFloat(awayAdv.Field_Tilt),
-                    parseFloat(homeAdv.Clean_Sheet_Probability), parseFloat(awayAdv.Clean_Sheet_Probability),
-                    Number(homeAdv.Rest_Days), Number(awayAdv.Rest_Days)
-                ];
+            const implied = 1 / (match.oddsH || 2.5);
+            const edge = Math.round((probs[bestIndex] - implied) * 100);
+            const valueText = edge > 3 ? `✅ +${edge}% EDGE` : "";
 
-                const probs = await predictWithModel(features);
-                const bestIndex = probs.indexOf(Math.max(...probs));
-                const labels = ["HOME WIN", "DRAW", "AWAY WIN"];
-                const bestBet = labels[bestIndex];
-                const confidence = Math.round(probs[bestIndex] * 100);
+            const predScore = `${Math.round(1.3 + probs[0]*1.8)}-${Math.round(1.0 + probs[2]*1.6)}`;
+            const stake = calculateStake(confidence, edge);
 
-                const implied = 1 / (game.oddsH || 2.5);
-                const edge = Math.round((probs[bestIndex] - implied) * 100);
-                const valueText = edge > 3 ? `✅ +${edge}% EDGE` : "";
+            const prediction = {
+                game: match, probs, bestBet, confidence, edge, valueText, predScore, stake, features, actual: null, bytezAnalysis
+            };
 
-                const predScore = `${Math.round(1.3 + probs[0]*1.8)}-${Math.round(1.0 + probs[2]*1.6)}`;
-                const stake = calculateStake(confidence, edge);
-
-                newPredictions.push({
-                    game, probs, bestBet, confidence, edge, valueText, predScore, stake, features, actual: null, bytezAnalysis
-                });
-            }
-
-            setPredictions(newPredictions);
+            setPredictions(prev => [prediction, ...prev]);
             showToast("Analysis complete!");
         } catch (err: any) {
             showToast("Error: " + err.message);
             setGlobalError(err.message);
-            console.error(err);
         } finally {
             setIsLoading(false);
         }
@@ -280,29 +224,6 @@ export default function App() {
         setTotalGames(0);
         setPredictions([]);
         showToast("History cleared!");
-    };
-
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragging(true);
-    };
-
-    const handleDragLeave = (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragging(false);
-    };
-
-    const handleDrop = async (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragging(false);
-        const file = e.dataTransfer.files?.[0];
-        if (!file) return;
-        
-        if (mode === 'SPARTA' && phase === 'STRATOS' && spartaMatrix) {
-            await processLineupScreenshot(file);
-        } else if (mode === 'BATCH') {
-            await processFile(file);
-        }
     };
 
     const successRate = totalGames > 0 ? Math.round((totalCorrect / totalGames) * 100) : 0;
@@ -377,20 +298,28 @@ export default function App() {
                 </header>
 
                 <div className="flex justify-center mb-12 relative z-10">
-                    <div className="glass-panel p-2 rounded-2xl flex gap-2 relative overflow-hidden">
+                    <div className="glass-panel p-1.5 rounded-2xl flex gap-1 relative overflow-hidden">
                         <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent pointer-events-none"></div>
-                        <button 
-                            onClick={() => setMode('SPARTA')}
-                            className={`relative z-10 px-10 py-3.5 rounded-xl font-bold text-sm tracking-widest transition-all duration-500 ${mode === 'SPARTA' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)]' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'}`}
-                        >
-                            SPARTA LOGIC
-                        </button>
-                        <button 
-                            onClick={() => setMode('BATCH')}
-                            className={`relative z-10 px-10 py-3.5 rounded-xl font-bold text-sm tracking-widest transition-all duration-500 ${mode === 'BATCH' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)]' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'}`}
-                        >
-                            BATCH ODDS
-                        </button>
+                        
+                        {[
+                            { id: 'SPARTA', label: 'SPARTA LOGIC', icon: Brain },
+                            { id: 'UPCOMING', label: 'LIVE & UPCOMING', icon: Calendar },
+                            { id: 'PERFORMANCE', label: 'PERFORMANCE', icon: Activity },
+                            { id: 'SETTINGS', label: 'API SETTINGS', icon: ShieldCheck }
+                        ].map((item) => (
+                            <button 
+                                key={item.id}
+                                onClick={() => setMode(item.id as any)}
+                                className={`relative z-10 px-6 py-3 rounded-xl font-bold text-[10px] tracking-[0.2em] transition-all duration-500 flex items-center gap-2 uppercase ${
+                                    mode === item.id 
+                                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.1)]' 
+                                        : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'
+                                }`}
+                            >
+                                <item.icon className={`w-3.5 h-3.5 ${mode === item.id ? 'text-emerald-400' : 'text-gray-600'}`} />
+                                {item.label}
+                            </button>
+                        ))}
                     </div>
                 </div>
 
@@ -402,7 +331,7 @@ export default function App() {
                         exit={{ opacity: 0, y: -10 }}
                         transition={{ duration: 0.2 }}
                     >
-                        {mode === 'SPARTA' ? (
+                        {mode === 'SPARTA' && (
                             <SpartaMode 
                                 phase={phase}
                                 matchInput={matchInput}
@@ -413,33 +342,27 @@ export default function App() {
                                 stratosResult={stratosResult}
                                 spartaMatrix={spartaMatrix}
                                 combatResult={combatResult}
-                                lineupAnalysis={lineupAnalysis}
-                                isDragging={isDragging}
-                                handleDragOver={handleDragOver}
-                                handleDragLeave={handleDragLeave}
-                                handleDrop={handleDrop}
-                                handleFileChange={handleFileChange}
                                 resetSparta={() => {
                                     setPhase('STRATOS');
                                     setSpartaMatrix(null);
                                     setStratosResult(null);
                                     setCombatResult(null);
-                                    setLineupAnalysis(null);
                                     setMatchInput("");
                                 }}
                             />
-                        ) : (
-                            <BatchMode 
+                        )}
+                        {mode === 'UPCOMING' && (
+                            <UpcomingMode 
                                 isLoading={isLoading}
                                 loadingStep={loadingStep}
-                                isDragging={isDragging}
-                                handleDragOver={handleDragOver}
-                                handleDragLeave={handleDragLeave}
-                                handleDrop={handleDrop}
-                                handleFileChange={handleFileChange}
+                                upcomingMatches={upcomingMatches}
+                                fetchUpcoming={fetchUpcoming}
+                                analyzeMatch={analyzeMatch}
                                 predictions={predictions}
                             />
                         )}
+                        {mode === 'SETTINGS' && <SettingsMode />}
+                        {mode === 'PERFORMANCE' && <PerformanceMode predictions={predictions} bankroll={bankroll} />}
                     </motion.div>
                 </AnimatePresence>
 
