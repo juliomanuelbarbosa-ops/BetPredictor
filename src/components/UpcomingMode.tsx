@@ -1,5 +1,5 @@
-import React from 'react';
-import { CloudLightning, Brain, RefreshCw, Calendar, Play } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { CloudLightning, Brain, RefreshCw, Calendar, Play, Search, Filter } from 'lucide-react';
 import { SpartaLogo } from './SpartaLogo';
 
 interface UpcomingModeProps {
@@ -10,6 +10,9 @@ interface UpcomingModeProps {
     analyzeMatch: (match: any) => void;
     predictions: any[];
     resolvePrediction: (id: string, won: boolean) => void;
+    deletePrediction: (id: string) => void;
+    copyPrediction: (pred: any) => void;
+    simulateInSparta: (match: any) => void;
 }
 
 export function UpcomingMode({
@@ -19,11 +22,31 @@ export function UpcomingMode({
     fetchUpcoming,
     analyzeMatch,
     predictions,
-    resolvePrediction
+    resolvePrediction,
+    deletePrediction,
+    copyPrediction,
+    simulateInSparta
 }: UpcomingModeProps) {
+    const [searchQuery, setSearchQuery] = useState("");
+    const [selectedLeague, setSelectedLeague] = useState("All Leagues");
+
+    const leagues = useMemo(() => {
+        const unique = Array.from(new Set(upcomingMatches.map(m => m.league)));
+        return ["All Leagues", ...unique];
+    }, [upcomingMatches]);
+
+    const filteredMatches = useMemo(() => {
+        return upcomingMatches.filter(m => {
+            const matchesSearch = m.home.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                m.away.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesLeague = selectedLeague === "All Leagues" || m.league === selectedLeague;
+            return matchesSearch && matchesLeague;
+        });
+    }, [upcomingMatches, searchQuery, selectedLeague]);
+
     return (
         <section className="mt-12 animate-in fade-in duration-700 relative z-10">
-            <div className="flex justify-between items-center mb-8">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
                         <Calendar className="w-5 h-5 text-emerald-400" />
@@ -33,20 +56,39 @@ export function UpcomingMode({
                         <p className="text-xs text-gray-500 font-mono uppercase tracking-widest mt-1">Next 24 Hours</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-4">
-                    {upcomingMatches.some(m => m.isMock) && (
-                        <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-yellow-500/5 border border-yellow-500/20 rounded-xl">
-                            <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></div>
-                            <span className="text-[10px] font-mono text-yellow-500/80 uppercase tracking-widest">Demo Mode Active</span>
-                        </div>
-                    )}
+                
+                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    {/* Search */}
+                    <div className="relative flex-1 md:flex-none md:w-64">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                        <input 
+                            type="text"
+                            placeholder="Search teams..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-black/40 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/50 transition-all"
+                        />
+                    </div>
+
+                    {/* League Filter */}
+                    <div className="relative flex-1 md:flex-none">
+                        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                        <select 
+                            value={selectedLeague}
+                            onChange={(e) => setSelectedLeague(e.target.value)}
+                            className="w-full bg-black/40 border border-white/10 rounded-xl py-2 pl-10 pr-8 text-sm text-white appearance-none focus:outline-none focus:border-emerald-500/50 transition-all cursor-pointer"
+                        >
+                            {leagues.map(l => <option key={l} value={l}>{l}</option>)}
+                        </select>
+                    </div>
+
                     <button 
                         onClick={fetchUpcoming}
                         disabled={isLoading}
                         className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-emerald-400 font-bold text-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-wait"
                     >
                         <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                        Refresh List
+                        <span className="hidden sm:inline">Refresh</span>
                     </button>
                 </div>
             </div>
@@ -58,15 +100,19 @@ export function UpcomingMode({
                 </div>
             ) : (
                 <div className="grid gap-4 mb-16">
-                    {upcomingMatches.length === 0 && !isLoading && (
+                    {filteredMatches.length === 0 && (
                         <div className="glass-panel rounded-[2rem] p-20 text-center border border-white/5">
-                            <p className="text-gray-500 font-mono tracking-widest uppercase mb-4">No matches found</p>
-                            <button onClick={fetchUpcoming} className="text-emerald-400 font-bold hover:underline">Click to refresh</button>
+                            <p className="text-gray-500 font-mono tracking-widest uppercase mb-4">
+                                {upcomingMatches.length === 0 ? "No matches found" : "No matches match your filters"}
+                            </p>
+                            {upcomingMatches.length === 0 && (
+                                <button onClick={fetchUpcoming} className="text-emerald-400 font-bold hover:underline">Click to refresh</button>
+                            )}
                         </div>
                     )}
                     
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        {upcomingMatches.map((match) => {
+                        {filteredMatches.map((match) => {
                             const isAnalyzed = predictions.some(p => p.game.id === match.id);
                             return (
                                 <div key={match.id} className="glass-panel rounded-2xl p-6 border border-white/5 hover:border-emerald-500/30 transition-all duration-300 group">
@@ -78,9 +124,15 @@ export function UpcomingMode({
                                                     <span className="text-[8px] font-mono bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-1.5 py-0.5 rounded uppercase tracking-tighter">Demo Data</span>
                                                 )}
                                                 {new Date(match.commence_time).getTime() - Date.now() < 3600000 && new Date(match.commence_time).getTime() > Date.now() && (
+                                                    <span className="text-[8px] font-mono bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-1.5 py-0.5 rounded uppercase tracking-tighter flex items-center gap-1">
+                                                        <span className="w-1 h-1 rounded-full bg-yellow-500 animate-pulse"></span>
+                                                        Starting Soon
+                                                    </span>
+                                                )}
+                                                {new Date(match.commence_time).getTime() <= Date.now() && new Date(match.commence_time).getTime() > Date.now() - 7200000 && (
                                                     <span className="text-[8px] font-mono bg-red-500/10 text-red-500 border border-red-500/20 px-1.5 py-0.5 rounded uppercase tracking-tighter flex items-center gap-1">
                                                         <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse"></span>
-                                                        Starting Soon
+                                                        LIVE
                                                     </span>
                                                 )}
                                             </div>
@@ -91,16 +143,24 @@ export function UpcomingMode({
                                                 {new Date(match.commence_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(match.commence_time).toLocaleDateString()}
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-4">
-                                            <div className="flex gap-2 font-mono text-[10px]">
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex gap-2 font-mono text-[10px] mr-2">
                                                 <div className="bg-black/40 px-2 py-1 rounded border border-white/5 text-gray-400">H: <span className="text-white">{match.oddsH?.toFixed(2) || '-'}</span></div>
                                                 <div className="bg-black/40 px-2 py-1 rounded border border-white/5 text-gray-400">D: <span className="text-white">{match.oddsD?.toFixed(2) || '-'}</span></div>
                                                 <div className="bg-black/40 px-2 py-1 rounded border border-white/5 text-gray-400">A: <span className="text-white">{match.oddsA?.toFixed(2) || '-'}</span></div>
                                             </div>
                                             <button 
+                                                onClick={() => simulateInSparta(match)}
+                                                className="p-3 rounded-xl transition-all duration-300 bg-white/5 text-gray-400 hover:bg-emerald-500/20 hover:text-emerald-400 border border-white/5 hover:border-emerald-500/30 group relative"
+                                                title="Simulate in Sparta"
+                                            >
+                                                <SpartaLogo className="w-5 h-5" />
+                                            </button>
+                                            <button 
                                                 onClick={() => analyzeMatch(match)}
                                                 disabled={isLoading || isAnalyzed}
                                                 className={`p-3 rounded-xl transition-all duration-300 ${isAnalyzed ? 'bg-emerald-500/20 text-emerald-400 cursor-default' : 'bg-white/5 text-gray-400 hover:bg-emerald-500/20 hover:text-emerald-400 border border-white/5 hover:border-emerald-500/30'}`}
+                                                title="Generate AI Prediction"
                                             >
                                                 {isAnalyzed ? <CloudLightning className="w-5 h-5" /> : <Play className="w-5 h-5" />}
                                             </button>
@@ -138,9 +198,27 @@ export function UpcomingMode({
                                             <span className="bg-black/50 border border-white/5 px-3 py-1.5 rounded-lg shadow-inner">A: <span className="text-white font-bold">{pred.game.oddsA || '-'}</span></span>
                                         </div>
                                     </div>
-                                    <div className="text-right flex flex-col items-end bg-black/40 p-4 rounded-2xl border border-white/5">
-                                        <div className="text-4xl font-black text-emerald-400 tracking-tighter drop-shadow-[0_0_15px_rgba(16,185,129,0.3)]">{pred.confidence}%</div>
-                                        <div className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mt-2">Confidence</div>
+                                    <div className="flex flex-col items-end gap-2">
+                                        <div className="flex gap-2">
+                                            <button 
+                                                onClick={() => copyPrediction(pred)}
+                                                className="p-2 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 transition-colors"
+                                                title="Copy Prediction"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                            </button>
+                                            <button 
+                                                onClick={() => deletePrediction(pred.id)}
+                                                className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 transition-colors"
+                                                title="Delete Prediction"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                                            </button>
+                                        </div>
+                                        <div className="text-right flex flex-col items-end bg-black/40 p-4 rounded-2xl border border-white/5">
+                                            <div className="text-4xl font-black text-emerald-400 tracking-tighter drop-shadow-[0_0_15px_rgba(16,185,129,0.3)]">{pred.confidence}%</div>
+                                            <div className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mt-2">Confidence</div>
+                                        </div>
                                     </div>
                                 </div>
 

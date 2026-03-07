@@ -1,6 +1,7 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Cpu, Zap, Activity, Shield, RefreshCw, ChevronRight, Binary, Database } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Cpu, Zap, Activity, Shield, RefreshCw, ChevronRight, Database } from 'lucide-react';
+import { SpartaLogo } from './SpartaLogo';
 
 interface SpartaModeProps {
     phase: 'STRATOS' | 'COMBAT';
@@ -36,7 +37,7 @@ export function SpartaMode({
                 <div className="lg:col-span-5 space-y-6">
                     <div className="glass-panel p-8 rounded-3xl border border-white/5 relative overflow-hidden">
                         <div className="absolute top-0 right-0 p-4 opacity-10">
-                            <Binary className="w-24 h-24 text-emerald-400" />
+                            <SpartaLogo className="w-24 h-24 text-emerald-400" />
                         </div>
                         
                         <div className="flex items-center gap-3 mb-8">
@@ -134,7 +135,13 @@ export function SpartaMode({
                     </div>
 
                     {isLoading && (
-                        <div className="glass-panel p-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 flex items-center gap-4">
+                        <div className="glass-panel p-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 flex items-center gap-4 relative overflow-hidden">
+                            {/* Scanning Line Animation */}
+                            <motion.div 
+                                className="absolute top-0 left-0 right-0 h-[2px] bg-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.8)] z-20"
+                                animate={{ top: ['0%', '100%', '0%'] }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                            />
                             <div className="w-10 h-10 rounded-full border-2 border-emerald-500/20 border-t-emerald-500 animate-spin"></div>
                             <div>
                                 <p className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest animate-pulse">Processing</p>
@@ -154,8 +161,8 @@ export function SpartaMode({
                                 animate={{ opacity: 1 }}
                                 className="h-full min-h-[400px] glass-panel rounded-3xl border border-white/5 border-dashed flex flex-col items-center justify-center text-center p-12"
                             >
-                                <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6">
-                                    <Binary className="w-10 h-10 text-gray-700" />
+                                <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6 border border-white/5 shadow-[0_0_30px_rgba(255,255,255,0.02)]">
+                                    <SpartaLogo className="w-10 h-10 text-gray-600" />
                                 </div>
                                 <h3 className="text-gray-500 font-mono text-xs uppercase tracking-[0.3em] mb-2">Awaiting Initialization</h3>
                                 <p className="text-gray-700 text-xs max-w-xs leading-relaxed">Enter match parameters and initialize the Sparta protocol to begin Monte Carlo simulation.</p>

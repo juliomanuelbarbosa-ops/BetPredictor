@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, Target, BarChart3, PieChart, History, Zap } from 'lucide-react';
+import { motion } from 'motion/react';
+import { TrendingUp, TrendingDown, Target, BarChart3, PieChart, History, Zap, ShieldCheck } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 interface PerformanceModeProps {
@@ -10,43 +10,48 @@ interface PerformanceModeProps {
 
 export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, bankroll }) => {
     
-    const { avgConfidence, totalStake, projectedProfit, realizedProfit, projectedROI, winRate, resolvedCount, winProbDist } = useMemo(() => {
+    const { avgConfidence, totalStake, realizedProfit, winRate, resolvedCount, winProbDist, roi, yieldRate, leagueStats } = useMemo(() => {
         if (predictions.length === 0) {
             return {
                 avgConfidence: 74,
                 totalStake: 0,
-                projectedProfit: 240,
                 realizedProfit: 0,
-                projectedROI: 12.4,
                 winRate: 0,
                 resolvedCount: 0,
-                winProbDist: [40, 65, 30, 85, 45, 90, 55, 70, 35, 60]
+                winProbDist: [40, 65, 30, 85, 45, 90, 55, 70, 35, 60],
+                roi: 12.4,
+                yieldRate: 8.2,
+                leagueStats: []
             };
         }
 
         const avgConf = predictions.reduce((acc, p) => acc + p.confidence, 0) / predictions.length;
         const tStake = predictions.reduce((acc, p) => acc + (p.stake || 0), 0);
         
-        let pProfit = 0;
         let rProfit = 0;
         let resolvedCount = 0;
         let wonCount = 0;
+        let resolvedStake = 0;
+        const leagueMap: Record<string, { won: number, total: number }> = {};
 
         predictions.forEach(p => {
-            if (p.actual === 'WON') {
-                rProfit += (p.stake || 0) * ((p.edge || 0) / 100);
+            if (p.actual === 'WON' || p.actual === 'LOST') {
+                const profit = p.profit !== undefined ? p.profit : (p.actual === 'WON' ? (p.stake || 0) : -(p.stake || 0));
+                rProfit += profit;
                 resolvedCount++;
-                wonCount++;
-            } else if (p.actual === 'LOST') {
-                rProfit -= (p.stake || 0);
-                resolvedCount++;
-            } else {
-                pProfit += ((p.stake || 0) * ((p.edge || 0) / 100));
+                resolvedStake += (p.stake || 0);
+                if (p.actual === 'WON') wonCount++;
+
+                const league = p.game.league || 'Other';
+                if (!leagueMap[league]) leagueMap[league] = { won: 0, total: 0 };
+                leagueMap[league].total++;
+                if (p.actual === 'WON') leagueMap[league].won++;
             }
         });
 
-        const pROI = tStake > 0 ? ((pProfit + rProfit) / tStake) * 100 : 0;
         const winRate = resolvedCount > 0 ? (wonCount / resolvedCount) * 100 : 0;
+        const roi = resolvedStake > 0 ? (rProfit / resolvedStake) * 100 : 0;
+        const yieldRate = resolvedStake > 0 ? (rProfit / resolvedStake) * 100 : 0; // Yield is often same as ROI in sports betting context
 
         // Create a distribution of confidence scores (10 buckets)
         const dist = new Array(10).fill(0);
@@ -57,34 +62,59 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, b
         const maxDist = Math.max(...dist, 1);
         const normalizedDist = dist.map(d => (d / maxDist) * 100);
 
+        const sortedLeagues = Object.entries(leagueMap)
+            .map(([name, stats]) => ({ name, winRate: (stats.won / stats.total) * 100, total: stats.total }))
+            .sort((a, b) => b.winRate - a.winRate)
+            .slice(0, 3);
+
         return {
             avgConfidence: Math.round(avgConf),
             totalStake: tStake,
-            projectedProfit: pProfit,
             realizedProfit: rProfit,
-            projectedROI: pROI,
             winRate: Math.round(winRate),
             resolvedCount,
-            winProbDist: normalizedDist.some(d => d > 0) ? normalizedDist : [40, 65, 30, 85, 45, 90, 55, 70, 35, 60]
+            winProbDist: normalizedDist.some(d => d > 0) ? normalizedDist : [40, 65, 30, 85, 45, 90, 55, 70, 35, 60],
+            roi,
+            yieldRate,
+            leagueStats: sortedLeagues
         };
     }, [predictions]);
 
-    // Mock historical data based on current bankroll for visualization
-    const chartData = [
-        { name: 'Mon', value: bankroll * 0.85 },
-        { name: 'Tue', value: bankroll * 0.92 },
-        { name: 'Wed', value: bankroll * 0.88 },
-        { name: 'Thu', value: bankroll * 1.05 },
-        { name: 'Fri', value: bankroll * 0.98 },
-        { name: 'Sat', value: bankroll * 1.15 },
-        { name: 'Sun', value: bankroll },
-    ];
+    const chartData = useMemo(() => {
+        if (predictions.length === 0) {
+            return [
+                { name: 'Mon', value: bankroll * 0.85 },
+                { name: 'Tue', value: bankroll * 0.92 },
+                { name: 'Wed', value: bankroll * 0.88 },
+                { name: 'Thu', value: bankroll * 1.05 },
+                { name: 'Fri', value: bankroll * 0.98 },
+                { name: 'Sat', value: bankroll * 1.15 },
+                { name: 'Sun', value: bankroll },
+            ];
+        }
+
+        const resolved = [...predictions].filter(p => p.actual === 'WON' || p.actual === 'LOST').reverse();
+        
+        if (resolved.length === 0) {
+            return [{ name: 'Start', value: bankroll }];
+        }
+
+        let currentBankroll = bankroll - resolved.reduce((acc, p) => acc + (p.profit || 0), 0);
+        const data = [{ name: 'Start', value: currentBankroll }];
+
+        resolved.forEach((p, i) => {
+            currentBankroll += (p.profit || 0);
+            data.push({ name: `Bet ${i + 1}`, value: currentBankroll });
+        });
+
+        return data;
+    }, [predictions, bankroll]);
 
     const stats = [
         { label: 'Avg. Confidence', value: `${avgConfidence}%`, icon: Target, color: 'text-blue-400' },
-        { label: resolvedCount > 0 ? 'Realized Profit' : 'Projected Profit', value: `${resolvedCount > 0 ? (realizedProfit >= 0 ? '+' : '') : '+'}$${(resolvedCount > 0 ? realizedProfit : projectedProfit).toFixed(2)}`, icon: TrendingUp, color: realizedProfit >= 0 ? 'text-emerald-400' : 'text-red-400' },
-        { label: resolvedCount > 0 ? 'Win Rate' : 'Projected ROI', value: `${resolvedCount > 0 ? winRate : projectedROI.toFixed(1)}%`, icon: BarChart3, color: 'text-purple-400' },
-        { label: 'Total Risked', value: `$${totalStake.toFixed(2)}`, icon: Zap, color: 'text-yellow-400' },
+        { label: 'Realized Profit', value: `${realizedProfit >= 0 ? '+' : ''}$${realizedProfit.toFixed(2)}`, icon: TrendingUp, color: realizedProfit >= 0 ? 'text-emerald-400' : 'text-red-400' },
+        { label: 'ROI / Yield', value: `${roi.toFixed(1)}%`, icon: BarChart3, color: 'text-purple-400' },
+        { label: 'Win Rate', value: `${winRate}%`, icon: ShieldCheck, color: 'text-yellow-400' },
     ];
 
     return (
@@ -126,7 +156,13 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, b
                                         <p className="text-[10px] text-gray-500 font-mono mt-0.5">{pred.bestBet} @ {pred.confidence}%</p>
                                     </div>
                                     <div className="text-right">
-                                        <span className="text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">ANALYZED</span>
+                                        {pred.actual === 'WON' ? (
+                                            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">WON</span>
+                                        ) : pred.actual === 'LOST' ? (
+                                            <span className="text-[10px] font-mono text-red-400 bg-red-400/10 px-2 py-0.5 rounded">LOST</span>
+                                        ) : (
+                                            <span className="text-[10px] font-mono text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded">ANALYZED</span>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -219,18 +255,21 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, b
                             </div>
                         </div>
                         <div className="glass-panel p-8 rounded-3xl border border-white/5 flex flex-col justify-center">
-                            <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 rounded-full border-4 border-emerald-500/20 border-t-emerald-500 flex items-center justify-center">
-                                    <span className="text-lg font-mono font-bold text-white">
-                                        {predictions.length > 0 ? Math.min(99, Math.round(avgConfidence + projectedROI)).toString() : '82'}
-                                    </span>
-                                </div>
-                                <div>
-                                    <h4 className="text-white font-bold text-sm uppercase tracking-widest">System Efficiency</h4>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        {predictions.length > 0 ? 'Based on analyzed edge and confidence.' : 'Optimal stake utilization detected.'}
-                                    </p>
-                                </div>
+                            <h4 className="text-white font-bold text-sm mb-4 uppercase tracking-widest opacity-50">Top Leagues</h4>
+                            <div className="space-y-3">
+                                {leagueStats.length > 0 ? leagueStats.map((l, idx) => (
+                                    <div key={idx} className="flex items-center justify-between">
+                                        <span className="text-[10px] font-mono text-gray-400 truncate max-w-[120px]">{l.name}</span>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-20 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                                <div className="h-full bg-emerald-500" style={{ width: `${l.winRate}%` }}></div>
+                                            </div>
+                                            <span className="text-[10px] font-mono text-emerald-400 font-bold">{Math.round(l.winRate)}%</span>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <p className="text-[10px] font-mono text-gray-600 italic">No league data available yet.</p>
+                                )}
                             </div>
                         </div>
                     </div>

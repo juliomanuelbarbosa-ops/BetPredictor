@@ -37,7 +37,7 @@ export default function App() {
     const [predictions, setPredictions] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [loadingStep, setLoadingStep] = useState<string>("");
-    const [toast, setToast] = useState<string | null>(null);
+    const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
     const [globalError, setGlobalError] = useState<string | null>(null);
 
     const [phase, setPhase] = useState<'STRATOS' | 'COMBAT'>('STRATOS');
@@ -63,7 +63,7 @@ export default function App() {
             setPhase('COMBAT');
             showToast("Combat Phase Complete.");
         } catch (err: any) {
-            showToast("Error: " + err.message);
+            showToast("Error: " + err.message, 'error');
             setGlobalError(err.message);
         } finally {
             setIsLoading(false);
@@ -71,23 +71,55 @@ export default function App() {
     };
 
     const resolvePrediction = (predId: string, won: boolean) => {
-        setPredictions(prev => prev.map(p => {
+        savePredictions(prev => prev.map(p => {
             if (p.id === predId && p.actual === null) {
-                const newBankroll = won ? bankroll + (p.stake * (p.edge / 100)) : bankroll - p.stake;
-                saveBankroll(newBankroll);
+                let odds = 2.0;
+                if (p.bestBet === "HOME WIN") odds = p.game.oddsH || 2.0;
+                else if (p.bestBet === "DRAW") odds = p.game.oddsD || 3.0;
+                else if (p.bestBet === "AWAY WIN") odds = p.game.oddsA || 3.0;
+
+                const profit = won ? p.stake * (odds - 1) : -p.stake;
+                saveBankroll(prevBankroll => prevBankroll + profit);
                 
-                const newTotalCorrect = totalCorrect + (won ? 1 : 0);
-                const newTotalGames = totalGames + 1;
-                setTotalCorrect(newTotalCorrect);
-                setTotalGames(newTotalGames);
-                localStorage.setItem('totalCorrect', newTotalCorrect.toString());
-                localStorage.setItem('totalGames', newTotalGames.toString());
+                setTotalCorrect(prev => {
+                    const updated = prev + (won ? 1 : 0);
+                    localStorage.setItem('totalCorrect', updated.toString());
+                    return updated;
+                });
+                setTotalGames(prev => {
+                    const updated = prev + 1;
+                    localStorage.setItem('totalGames', updated.toString());
+                    return updated;
+                });
                 
-                return { ...p, actual: won ? 'WON' : 'LOST' };
+                return { ...p, actual: won ? 'WON' : 'LOST', profit };
             }
             return p;
         }));
         showToast(`Bet marked as ${won ? 'WON' : 'LOST'}`);
+    };
+
+    const deletePrediction = (predId: string) => {
+        savePredictions(prev => {
+            const pred = prev.find(p => p.id === predId);
+            if (pred && pred.actual !== null) {
+                saveBankroll(prevBankroll => prevBankroll - (pred.profit || 0));
+                setTotalGames(prevGames => {
+                    const updated = prevGames - 1;
+                    localStorage.setItem('totalGames', updated.toString());
+                    return updated;
+                });
+                if (pred.actual === 'WON') {
+                    setTotalCorrect(prevCorrect => {
+                        const updated = prevCorrect - 1;
+                        localStorage.setItem('totalCorrect', updated.toString());
+                        return updated;
+                    });
+                }
+            }
+            return prev.filter(p => p.id !== predId);
+        });
+        showToast("Prediction deleted");
     };
 
     const [mode, setMode] = useState<'SPARTA' | 'UPCOMING' | 'SETTINGS' | 'PERFORMANCE'>('UPCOMING');
@@ -115,21 +147,50 @@ export default function App() {
         if (tc) setTotalCorrect(parseInt(tc));
         const tg = localStorage.getItem('totalGames');
         if (tg) setTotalGames(parseInt(tg));
+        const preds = localStorage.getItem('predictions');
+        if (preds) {
+            try {
+                setPredictions(JSON.parse(preds));
+            } catch (e) {
+                console.error("Failed to parse predictions from localStorage");
+            }
+        }
     }, []);
 
-    const saveBankroll = (val: number) => {
-        setBankroll(val);
-        localStorage.setItem('bankroll', val.toString());
+    const saveBankroll = (val: number | ((prev: number) => number)) => {
+        if (typeof val === 'function') {
+            setBankroll(prev => {
+                const updated = val(prev);
+                localStorage.setItem('bankroll', updated.toString());
+                return updated;
+            });
+        } else {
+            setBankroll(val);
+            localStorage.setItem('bankroll', val.toString());
+        }
     };
 
-    const showToast = (msg: string) => {
-        setToast(msg);
+    const savePredictions = (newPredictions: any[] | ((prev: any[]) => any[])) => {
+        if (typeof newPredictions === 'function') {
+            setPredictions(prev => {
+                const updated = newPredictions(prev);
+                localStorage.setItem('predictions', JSON.stringify(updated));
+                return updated;
+            });
+        } else {
+            setPredictions(newPredictions);
+            localStorage.setItem('predictions', JSON.stringify(newPredictions));
+        }
+    };
+
+    const showToast = (msg: string, type: 'success' | 'error' | 'info' = 'success') => {
+        setToast({ message: msg, type });
         setTimeout(() => setToast(null), 3000);
     };
 
     const initializeStratos = async () => {
         if (!matchInput) {
-            showToast("Please enter a match name.");
+            showToast("Please enter a match name.", 'error');
             return;
         }
         setIsLoading(true);
@@ -154,7 +215,7 @@ export default function App() {
             setPhase('STRATOS');
             showToast("Stratos Phase Complete.");
         } catch (err: any) {
-            showToast("Error: " + err.message);
+            showToast("Error: " + err.message, 'error');
             setGlobalError(err.message);
         } finally {
             setIsLoading(false);
@@ -170,7 +231,7 @@ export default function App() {
             setUpcomingMatches(matches);
             showToast(`Found ${matches.length} matches!`);
         } catch (err: any) {
-            showToast("Error: " + err.message);
+            showToast("Error: " + err.message, 'error');
             setGlobalError(err.message);
         } finally {
             setIsLoading(false);
@@ -248,10 +309,10 @@ export default function App() {
                 game: match, probs, bestBet, confidence, edge, valueText, predScore, stake, features, actual: null, bytezAnalysis
             };
 
-            setPredictions(prev => [prediction, ...prev]);
+            savePredictions(prev => [prediction, ...prev]);
             showToast("Analysis complete!");
         } catch (err: any) {
-            showToast("Error: " + err.message);
+            showToast("Error: " + err.message, 'error');
             setGlobalError(err.message);
         } finally {
             setIsLoading(false);
@@ -264,12 +325,17 @@ export default function App() {
     };
 
     const clearHistory = () => {
-        localStorage.clear();
-        setBankroll(1000);
-        setTotalCorrect(0);
-        setTotalGames(0);
-        setPredictions([]);
-        showToast("History cleared!");
+        if (window.confirm("Are you sure you want to permanently delete all predictions, bankroll, and history? This cannot be undone.")) {
+            localStorage.removeItem('predictions');
+            localStorage.removeItem('bankroll');
+            localStorage.removeItem('totalCorrect');
+            localStorage.removeItem('totalGames');
+            setBankroll(1000);
+            setTotalCorrect(0);
+            setTotalGames(0);
+            savePredictions([]);
+            showToast("History cleared!");
+        }
     };
 
     const successRate = totalGames > 0 ? Math.round((totalCorrect / totalGames) * 100) : 0;
@@ -414,6 +480,16 @@ export default function App() {
                                 analyzeMatch={analyzeMatch}
                                 predictions={predictions}
                                 resolvePrediction={resolvePrediction}
+                                deletePrediction={deletePrediction}
+                                copyPrediction={copyPrediction}
+                                simulateInSparta={(match) => {
+                                    setMatchInput(`${match.home} vs ${match.away}`);
+                                    setPhase('STRATOS');
+                                    setSpartaMatrix(null);
+                                    setStratosResult(null);
+                                    setCombatResult(null);
+                                    setMode('SPARTA');
+                                }}
                             />
                         )}
                         {mode === 'SETTINGS' && <SettingsMode />}
@@ -435,10 +511,20 @@ export default function App() {
                         initial={{ opacity: 0, y: 30, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 30, scale: 0.95 }}
-                        className="fixed bottom-8 right-8 bg-black/80 backdrop-blur-xl border border-emerald-500/30 text-emerald-50 px-6 py-4 rounded-2xl shadow-[0_10px_40px_rgba(16,185,129,0.2)] flex items-center gap-3 z-50 font-mono text-sm"
+                        className={`fixed bottom-8 right-8 backdrop-blur-xl border ${
+                            toast.type === 'error' ? 'bg-red-950/80 border-red-500/30 text-red-50' : 
+                            toast.type === 'info' ? 'bg-blue-950/80 border-blue-500/30 text-blue-50' :
+                            'bg-black/80 border-emerald-500/30 text-emerald-50'
+                        } px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 z-50 font-mono text-sm`}
                     >
-                        <CheckCircle className="w-5 h-5 text-emerald-400" />
-                        <span className="tracking-wide">{toast}</span>
+                        {toast.type === 'error' ? (
+                            <ShieldCheck className="w-5 h-5 text-red-400" />
+                        ) : toast.type === 'info' ? (
+                            <Activity className="w-5 h-5 text-blue-400" />
+                        ) : (
+                            <CheckCircle className="w-5 h-5 text-emerald-400" />
+                        )}
+                        <span className="tracking-wide">{toast.message}</span>
                     </motion.div>
                 )}
             </AnimatePresence>

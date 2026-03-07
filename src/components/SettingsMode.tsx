@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { Key, Save, Trash2, Globe, Shield, Cpu, Cloud, Trophy, Zap } from 'lucide-react';
 
 interface ApiKey {
@@ -360,7 +360,12 @@ export const SettingsMode: React.FC = () => {
                                     {service.icon}
                                 </div>
                                 <div>
-                                    <h3 className="text-white font-bold">{service.name}</h3>
+                                    <h3 className="text-white font-bold flex items-center gap-2">
+                                        {service.name}
+                                        {keys[service.envVar] && (
+                                            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" title="Configured"></span>
+                                        )}
+                                    </h3>
                                     <span className="text-[10px] font-mono text-emerald-500/50 uppercase tracking-widest">{service.category}</span>
                                 </div>
                             </div>
