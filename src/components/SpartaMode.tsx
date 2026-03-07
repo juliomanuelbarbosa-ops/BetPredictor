@@ -12,6 +12,7 @@ interface SpartaModeProps {
     stratosResult: any;
     spartaMatrix: any;
     combatResult: any;
+    runCombat: () => void;
     resetSparta: () => void;
 }
 
@@ -25,6 +26,7 @@ export function SpartaMode({
     stratosResult,
     spartaMatrix,
     combatResult,
+    runCombat,
     resetSparta
 }: SpartaModeProps) {
     return (
@@ -176,54 +178,85 @@ export function SpartaMode({
 
                                     <div className="grid grid-cols-3 gap-6 mb-10">
                                         {[
-                                            { label: 'Home Win', value: stratosResult.homeWins, color: 'text-emerald-400' },
-                                            { label: 'Draw', value: stratosResult.draws, color: 'text-gray-400' },
-                                            { label: 'Away Win', value: stratosResult.awayWins, color: 'text-blue-400' }
+                                            { label: 'Home Win', value: combatResult ? combatResult.homeWins : stratosResult.homeWins, prev: combatResult ? stratosResult.homeWins : null, color: 'text-emerald-400' },
+                                            { label: 'Draw', value: combatResult ? combatResult.draws : stratosResult.draws, prev: combatResult ? stratosResult.draws : null, color: 'text-gray-400' },
+                                            { label: 'Away Win', value: combatResult ? combatResult.awayWins : stratosResult.awayWins, prev: combatResult ? stratosResult.awayWins : null, color: 'text-blue-400' }
                                         ].map((res, i) => (
                                             <div key={i} className="bg-black/40 p-6 rounded-2xl border border-white/5 text-center relative overflow-hidden group">
                                                 <div className="absolute bottom-0 left-0 h-1 bg-current opacity-20 transition-all duration-1000" style={{ width: `${res.value}%`, color: res.color.replace('text-', '') }}></div>
                                                 <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-2">{res.label}</p>
-                                                <p className={`text-4xl font-mono font-bold ${res.color}`}>{res.value.toFixed(1)}%</p>
+                                                <div className="flex flex-col items-center justify-center">
+                                                    <p className={`text-4xl font-mono font-bold ${res.color}`}>{res.value.toFixed(1)}%</p>
+                                                    {res.prev !== null && (
+                                                        <p className="text-[10px] font-mono text-gray-500 mt-1">vs {res.prev.toFixed(1)}%</p>
+                                                    )}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
 
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-8 border-t border-white/5">
                                         {[
-                                            { label: 'Over 2.5', value: stratosResult.over25 },
-                                            { label: 'Under 2.5', value: stratosResult.under25 },
-                                            { label: 'BTTS (Yes)', value: stratosResult.btts },
-                                            { label: 'Most Likely', value: stratosResult.mostLikelyScore, isScore: true }
+                                            { label: 'Over 2.5', value: combatResult ? combatResult.over25 : stratosResult.over25, prev: combatResult ? stratosResult.over25 : null },
+                                            { label: 'Under 2.5', value: combatResult ? combatResult.under25 : stratosResult.under25, prev: combatResult ? stratosResult.under25 : null },
+                                            { label: 'BTTS (Yes)', value: combatResult ? combatResult.btts : stratosResult.btts, prev: combatResult ? stratosResult.btts : null },
+                                            { label: 'Most Likely', value: combatResult ? combatResult.mostLikelyScore : stratosResult.mostLikelyScore, prev: combatResult ? stratosResult.mostLikelyScore : null, isScore: true }
                                         ].map((stat, i) => (
                                             <div key={i} className="text-center">
                                                 <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mb-1">{stat.label}</p>
                                                 <p className={`text-lg font-mono font-bold ${stat.isScore ? 'text-emerald-400' : 'text-white'}`}>
                                                     {typeof stat.value === 'number' ? `${stat.value.toFixed(1)}%` : stat.value}
                                                 </p>
+                                                {stat.prev !== null && (
+                                                    <p className="text-[9px] font-mono text-gray-500 mt-0.5">
+                                                        vs {typeof stat.prev === 'number' ? `${stat.prev.toFixed(1)}%` : stat.prev}
+                                                    </p>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
                                 </div>
 
-                                <div className="glass-panel p-8 rounded-3xl border border-emerald-500/20 bg-emerald-500/5">
-                                    <div className="flex items-center justify-between mb-6">
-                                        <div className="flex items-center gap-3">
-                                            <Shield className="w-5 h-5 text-emerald-400" />
-                                            <h3 className="text-white font-bold text-sm uppercase tracking-widest">Combat Phase Ready</h3>
+                                {!combatResult ? (
+                                    <div className="glass-panel p-8 rounded-3xl border border-emerald-500/20 bg-emerald-500/5">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <div className="flex items-center gap-3">
+                                                <Shield className="w-5 h-5 text-emerald-400" />
+                                                <h3 className="text-white font-bold text-sm uppercase tracking-widest">Combat Phase Ready</h3>
+                                            </div>
+                                            <button 
+                                                onClick={resetSparta}
+                                                className="text-[10px] font-mono text-gray-500 hover:text-white transition-colors uppercase tracking-widest"
+                                            >
+                                                Reset Sim
+                                            </button>
                                         </div>
+                                        <p className="text-xs text-gray-400 leading-relaxed mb-6">The Stratos baseline is complete. You can now proceed to the Combat phase for final lineup adjustments and real-time variable injection.</p>
                                         <button 
-                                            onClick={resetSparta}
-                                            className="text-[10px] font-mono text-gray-500 hover:text-white transition-colors uppercase tracking-widest"
+                                            onClick={runCombat}
+                                            className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white py-4 rounded-xl font-bold tracking-[0.2em] transition-all flex items-center justify-center gap-3 uppercase text-[10px]"
                                         >
-                                            Reset Sim
+                                            Initialize Combat Sequence
+                                            <ChevronRight className="w-4 h-4" />
                                         </button>
                                     </div>
-                                    <p className="text-xs text-gray-400 leading-relaxed mb-6">The Stratos baseline is complete. You can now proceed to the Combat phase for final lineup adjustments and real-time variable injection.</p>
-                                    <button className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white py-4 rounded-xl font-bold tracking-[0.2em] transition-all flex items-center justify-center gap-3 uppercase text-[10px]">
-                                        Initialize Combat Sequence
-                                        <ChevronRight className="w-4 h-4" />
-                                    </button>
-                                </div>
+                                ) : (
+                                    <div className="glass-panel p-8 rounded-3xl border border-emerald-500/20 bg-emerald-500/10">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <div className="flex items-center gap-3">
+                                                <Shield className="w-5 h-5 text-emerald-400" />
+                                                <h3 className="text-white font-bold text-sm uppercase tracking-widest">Combat Phase Complete</h3>
+                                            </div>
+                                            <button 
+                                                onClick={resetSparta}
+                                                className="text-[10px] font-mono text-emerald-400 hover:text-emerald-300 transition-colors uppercase tracking-widest border border-emerald-500/30 px-3 py-1 rounded-full"
+                                            >
+                                                Reset Sim
+                                            </button>
+                                        </div>
+                                        <p className="text-xs text-emerald-400/80 leading-relaxed">Real-time variables injected. The simulation has been updated with the latest tactical parameters.</p>
+                                    </div>
+                                )}
                             </motion.div>
                         )}
                     </AnimatePresence>

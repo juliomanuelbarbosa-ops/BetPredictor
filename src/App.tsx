@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Brain, CloudLightning, CheckCircle, Copy, RefreshCw, Calendar } from 'lucide-react';
 import { calculateStake } from './lib/utils';
-import { getWeather, getRealOdds, getBetStackData, getBizzoPrediction, getGameForecast, getBytezAnalysis, getPlayerMetrics, getAdvancedMetrics, getUpcomingGames } from './lib/api';
+import { getWeather, getRealOdds, getBetStackData, getBizzoPrediction, getGameForecast, getBytezAnalysis, getPlayerMetrics, getAdvancedMetrics, getUpcomingGames, getActiveServicesCount } from './lib/api';
 import { predictWithModel, createAndTrainModel } from './lib/ai';
 import { initializeSpartaMatrix, runMonteCarlo } from './lib/spartaSim';
 import { footballData } from './lib/data';
@@ -11,6 +11,7 @@ import { UpcomingMode } from './components/UpcomingMode';
 import { SettingsMode } from './components/SettingsMode';
 import { PerformanceMode } from './components/PerformanceMode';
 import { LayoutGrid, Activity, ShieldCheck } from 'lucide-react';
+import { SpartaLogo } from './components/SpartaLogo';
 
 const leagueMap: Record<string, { oddsKey: string }> = {
     "premier league": {oddsKey: "soccer_epl"},
@@ -44,6 +45,50 @@ export default function App() {
     const [spartaMatrix, setSpartaMatrix] = useState<any>(null);
     const [stratosResult, setStratosResult] = useState<any>(null);
     const [combatResult, setCombatResult] = useState<any>(null);
+
+    const runCombat = async () => {
+        setIsLoading(true);
+        setLoadingStep("Injecting real-time variables and running Combat simulation...");
+        try {
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            // Modify spartaMatrix slightly to simulate real-time changes (e.g., lineups, late injuries)
+            const adjustedMatrix = {
+                ...spartaMatrix,
+                home: { ...spartaMatrix.home, xG_base: spartaMatrix.home.xG_base * (1 + (Math.random() * 0.1 - 0.02)) },
+                away: { ...spartaMatrix.away, xG_base: spartaMatrix.away.xG_base * (1 + (Math.random() * 0.1 - 0.05)) }
+            };
+            setSpartaMatrix(adjustedMatrix);
+            const result = runMonteCarlo(adjustedMatrix, 10000);
+            setCombatResult(result);
+            setPhase('COMBAT');
+            showToast("Combat Phase Complete.");
+        } catch (err: any) {
+            showToast("Error: " + err.message);
+            setGlobalError(err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const resolvePrediction = (predId: string, won: boolean) => {
+        setPredictions(prev => prev.map(p => {
+            if (p.id === predId && p.actual === null) {
+                const newBankroll = won ? bankroll + (p.stake * (p.edge / 100)) : bankroll - p.stake;
+                saveBankroll(newBankroll);
+                
+                const newTotalCorrect = totalCorrect + (won ? 1 : 0);
+                const newTotalGames = totalGames + 1;
+                setTotalCorrect(newTotalCorrect);
+                setTotalGames(newTotalGames);
+                localStorage.setItem('totalCorrect', newTotalCorrect.toString());
+                localStorage.setItem('totalGames', newTotalGames.toString());
+                
+                return { ...p, actual: won ? 'WON' : 'LOST' };
+            }
+            return p;
+        }));
+        showToast(`Bet marked as ${won ? 'WON' : 'LOST'}`);
+    };
 
     const [mode, setMode] = useState<'SPARTA' | 'UPCOMING' | 'SETTINGS' | 'PERFORMANCE'>('UPCOMING');
     const [upcomingMatches, setUpcomingMatches] = useState<any[]>([]);
@@ -199,6 +244,7 @@ export default function App() {
             const stake = calculateStake(confidence, edge);
 
             const prediction = {
+                id: Math.random().toString(36).substring(2, 9),
                 game: match, probs, bestBet, confidence, edge, valueText, predScore, stake, features, actual: null, bytezAnalysis
             };
 
@@ -254,7 +300,7 @@ export default function App() {
                     <div className="flex items-center gap-6 relative z-10">
                         <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-emerald-900 rounded-2xl flex items-center justify-center text-2xl font-black shadow-[0_0_40px_rgba(16,185,129,0.3)] border border-emerald-400/30 relative group">
                             <div className="absolute inset-0 bg-emerald-400/20 rounded-2xl blur-md group-hover:blur-xl transition-all duration-500"></div>
-                            <Brain className="w-8 h-8 text-white relative z-10" />
+                            <SpartaLogo className="w-8 h-8 text-white relative z-10" />
                         </div>
                         <div>
                             <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tighter text-white drop-shadow-lg">
@@ -273,6 +319,13 @@ export default function App() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-4 sm:gap-6 w-full md:w-auto relative z-10">
+                        <div className="flex-1 md:flex-none flex items-center justify-between gap-6 bg-black/60 border border-white/10 rounded-2xl px-6 py-4 shadow-inner">
+                            <span className="text-xs text-gray-500 font-mono uppercase tracking-widest">Synergy</span>
+                            <div className="text-lg font-mono font-bold text-emerald-400">
+                                {Math.min(100, getActiveServicesCount() * 10)}<span className="text-emerald-500/50 text-sm ml-1">%</span>
+                            </div>
+                        </div>
+
                         <div className="flex-1 md:flex-none flex items-center justify-between gap-6 bg-black/60 border border-white/10 rounded-2xl px-6 py-4 shadow-inner">
                             <span className="text-xs text-gray-500 font-mono uppercase tracking-widest">Bankroll</span>
                             <div className="flex items-center">
@@ -302,7 +355,7 @@ export default function App() {
                         <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent pointer-events-none"></div>
                         
                         {[
-                            { id: 'SPARTA', label: 'SPARTA LOGIC', icon: Brain },
+                            { id: 'SPARTA', label: 'SPARTA LOGIC', icon: SpartaLogo },
                             { id: 'UPCOMING', label: 'LIVE & UPCOMING', icon: Calendar },
                             { id: 'PERFORMANCE', label: 'PERFORMANCE', icon: Activity },
                             { id: 'SETTINGS', label: 'API SETTINGS', icon: ShieldCheck }
@@ -342,6 +395,7 @@ export default function App() {
                                 stratosResult={stratosResult}
                                 spartaMatrix={spartaMatrix}
                                 combatResult={combatResult}
+                                runCombat={runCombat}
                                 resetSparta={() => {
                                     setPhase('STRATOS');
                                     setSpartaMatrix(null);
@@ -359,6 +413,7 @@ export default function App() {
                                 fetchUpcoming={fetchUpcoming}
                                 analyzeMatch={analyzeMatch}
                                 predictions={predictions}
+                                resolvePrediction={resolvePrediction}
                             />
                         )}
                         {mode === 'SETTINGS' && <SettingsMode />}

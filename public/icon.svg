@@ -1,0 +1,15 @@
+<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="24" height="24" fill="#020202" />
+    <path 
+        d="M12 2 L12 7 M8 3.5 L8 8 M16 3.5 L16 8 M4 7 L4 10 M20 7 L20 10" 
+        stroke="#10b981" 
+        stroke-width="2" 
+        stroke-linecap="round" 
+    />
+    <path 
+        d="M 3 12 C 3 4, 21 4, 21 12 L 21 24 L 16 19 L 16 15 L 14 15 L 14 20 L 10 20 L 10 15 L 8 15 L 8 19 L 3 24 Z" 
+        fill="#ffffff" 
+    />
+    <rect x="7.5" y="15.5" width="2.5" height="2" fill="#10b981" />
+    <rect x="14" y="15.5" width="2.5" height="2" fill="#10b981" />
+</svg>

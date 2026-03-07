@@ -1,5 +1,6 @@
 import React from 'react';
 import { CloudLightning, Brain, RefreshCw, Calendar, Play } from 'lucide-react';
+import { SpartaLogo } from './SpartaLogo';
 
 interface UpcomingModeProps {
     isLoading: boolean;
@@ -8,6 +9,7 @@ interface UpcomingModeProps {
     fetchUpcoming: () => void;
     analyzeMatch: (match: any) => void;
     predictions: any[];
+    resolvePrediction: (id: string, won: boolean) => void;
 }
 
 export function UpcomingMode({
@@ -16,7 +18,8 @@ export function UpcomingMode({
     upcomingMatches,
     fetchUpcoming,
     analyzeMatch,
-    predictions
+    predictions,
+    resolvePrediction
 }: UpcomingModeProps) {
     return (
         <section className="mt-12 animate-in fade-in duration-700 relative z-10">
@@ -74,6 +77,12 @@ export function UpcomingMode({
                                                 {match.isMock && (
                                                     <span className="text-[8px] font-mono bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-1.5 py-0.5 rounded uppercase tracking-tighter">Demo Data</span>
                                                 )}
+                                                {new Date(match.commence_time).getTime() - Date.now() < 3600000 && new Date(match.commence_time).getTime() > Date.now() && (
+                                                    <span className="text-[8px] font-mono bg-red-500/10 text-red-500 border border-red-500/20 px-1.5 py-0.5 rounded uppercase tracking-tighter flex items-center gap-1">
+                                                        <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse"></span>
+                                                        Starting Soon
+                                                    </span>
+                                                )}
                                             </div>
                                             <div className="text-lg font-bold text-white flex items-center gap-3">
                                                 {match.home} <span className="text-gray-600 text-sm font-normal italic">vs</span> {match.away}
@@ -117,7 +126,7 @@ export function UpcomingMode({
                         {predictions.map((pred, i) => (
                             <div key={i} className="glass-card rounded-[2rem] p-8 relative overflow-hidden group hover:border-emerald-500/40 transition-all duration-500 hover:shadow-[0_10px_40px_rgba(16,185,129,0.15)] hover:-translate-y-1">
                                 <div className="absolute -top-10 -right-10 p-4 opacity-5 group-hover:opacity-10 transition-all duration-700 transform group-hover:scale-110 group-hover:rotate-12">
-                                    <Brain className="w-64 h-64 text-emerald-500" />
+                                    <SpartaLogo className="w-64 h-64 text-emerald-500" />
                                 </div>
                                 
                                 <div className="flex justify-between items-start mb-8 relative z-10">
@@ -142,10 +151,25 @@ export function UpcomingMode({
                                             <span className="text-xs font-mono text-gray-500 uppercase tracking-widest">Recommended Bet</span>
                                             <span className="font-extrabold text-lg text-emerald-400 tracking-wide">{pred.bestBet}</span>
                                         </div>
-                                        <div className="flex justify-between items-center">
+                                        <div className="flex justify-between items-center mb-4">
                                             <span className="text-xs font-mono text-gray-500 uppercase tracking-widest">Predicted Score</span>
                                             <span className="font-mono font-bold text-xl text-white">{pred.predScore}</span>
                                         </div>
+                                        
+                                        {/* Probability Bar */}
+                                        <div className="mt-4 pt-4 border-t border-white/5">
+                                            <div className="flex justify-between text-[10px] font-mono text-gray-500 mb-1.5">
+                                                <span>H: {(pred.probs[0] * 100).toFixed(1)}%</span>
+                                                <span>D: {(pred.probs[1] * 100).toFixed(1)}%</span>
+                                                <span>A: {(pred.probs[2] * 100).toFixed(1)}%</span>
+                                            </div>
+                                            <div className="h-1.5 w-full bg-white/5 rounded-full flex overflow-hidden">
+                                                <div className="h-full bg-emerald-500" style={{ width: `${pred.probs[0] * 100}%` }}></div>
+                                                <div className="h-full bg-gray-500" style={{ width: `${pred.probs[1] * 100}%` }}></div>
+                                                <div className="h-full bg-blue-500" style={{ width: `${pred.probs[2] * 100}%` }}></div>
+                                            </div>
+                                        </div>
+
                                         {pred.valueText && (
                                             <div className="mt-5 text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 inline-block px-4 py-2 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.1)]">
                                                 {pred.valueText}
@@ -154,9 +178,14 @@ export function UpcomingMode({
                                     </div>
 
                                     <div className="bg-black/40 rounded-2xl p-5 border border-white/5">
-                                        <div className="text-xs font-mono text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                            Tactical Insight
+                                        <div className="flex justify-between items-center mb-3">
+                                            <div className="text-xs font-mono text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                                Tactical Insight
+                                            </div>
+                                            <div className="text-[9px] font-mono text-emerald-500/70 border border-emerald-500/20 px-2 py-0.5 rounded uppercase">
+                                                {pred.bytezAnalysis.provider || 'AI Model'}
+                                            </div>
                                         </div>
                                         <p className="text-sm text-gray-300 leading-relaxed">{pred.bytezAnalysis.report}</p>
                                         <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
@@ -169,6 +198,28 @@ export function UpcomingMode({
                                         <div className="text-xs font-mono text-gray-500 uppercase tracking-wider">Suggested Stake</div>
                                         <div className="font-bold text-xl text-white">${pred.stake}</div>
                                     </div>
+                                    
+                                    {/* Resolution Buttons */}
+                                    {pred.actual === null ? (
+                                        <div className="flex gap-2 mt-4 pt-4 border-t border-white/5">
+                                            <button 
+                                                onClick={() => resolvePrediction(pred.id, true)}
+                                                className="flex-1 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 py-2 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-colors"
+                                            >
+                                                Mark Won
+                                            </button>
+                                            <button 
+                                                onClick={() => resolvePrediction(pred.id, false)}
+                                                className="flex-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 py-2 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-colors"
+                                            >
+                                                Mark Lost
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className={`mt-4 pt-4 border-t border-white/5 text-center text-xs font-bold tracking-widest uppercase ${pred.actual === 'WON' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                            RESULT: {pred.actual}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
