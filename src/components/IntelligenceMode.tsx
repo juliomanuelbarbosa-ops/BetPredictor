@@ -184,36 +184,37 @@ export function IntelligenceMode() {
                         <button
                             key={agent.id}
                             onClick={() => setSelectedAgent(agent)}
-                            className={`w-full text-left p-4 rounded-2xl border transition-all duration-300 group relative overflow-hidden ${
+                            className={`w-full text-left p-5 rounded-3xl border transition-all duration-500 group relative overflow-hidden ${
                                 selectedAgent.id === agent.id
-                                    ? 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.1)]'
-                                    : 'bg-black/40 border-white/5 hover:border-white/10'
+                                    ? 'bg-emerald-500/10 border-emerald-500/40 shadow-[0_0_30px_rgba(16,185,129,0.15)] scale-[1.02]'
+                                    : 'bg-black/60 border-white/5 hover:border-white/20 hover:bg-black/80'
                             }`}
                         >
                             {selectedAgent.id === agent.id && (
-                                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent pointer-events-none"></div>
+                                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-transparent pointer-events-none"></div>
                             )}
                             <div className="flex items-center gap-4 relative z-10">
-                                <div className={`w-10 h-10 rounded-lg bg-black/60 flex items-center justify-center border border-white/10 ${agent.color}`}>
-                                    <agent.icon className="w-5 h-5" />
+                                <div className={`w-12 h-12 rounded-2xl bg-black/80 flex items-center justify-center border border-white/10 shadow-inner ${agent.color} ${selectedAgent.id === agent.id ? 'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : ''}`}>
+                                    <agent.icon className="w-6 h-6" />
                                 </div>
                                 <div>
-                                    <div className="text-sm font-black text-white tracking-wider">{agent.name}</div>
-                                    <div className="text-[10px] font-mono text-gray-500 uppercase tracking-tighter">{agent.role}</div>
+                                    <div className="text-base font-black text-white tracking-wider">{agent.name}</div>
+                                    <div className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mt-0.5">{agent.role}</div>
                                 </div>
                             </div>
-                            <p className="mt-3 text-[10px] text-gray-500 leading-relaxed relative z-10 group-hover:text-gray-400 transition-colors">
+                            <p className="mt-4 text-[11px] text-gray-400 leading-relaxed relative z-10 group-hover:text-gray-300 transition-colors">
                                 {agent.description}
                             </p>
                         </button>
                     ))}
 
-                    <div className="mt-8 p-4 bg-black/60 border border-white/5 rounded-2xl">
-                        <div className="flex items-center gap-2 mb-2">
-                            <Cpu className="w-3 h-3 text-emerald-500" />
-                            <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Core Status</span>
+                    <div className="mt-8 p-6 bg-black/60 border border-white/5 rounded-3xl shadow-inner relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-[50px] -mr-16 -mt-16 pointer-events-none"></div>
+                        <div className="flex items-center gap-3 mb-4 relative z-10">
+                            <Cpu className="w-4 h-4 text-emerald-500" />
+                            <span className="text-[10px] font-mono text-gray-500 uppercase tracking-[0.2em] font-bold">Core Status</span>
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-3 relative z-10">
                             <div className="flex justify-between items-center">
                                 <span className="text-[9px] font-mono text-gray-600">Latency</span>
                                 <span className="text-[9px] font-mono text-emerald-400">12ms</span>
@@ -239,24 +240,27 @@ export function IntelligenceMode() {
                 </div>
 
                 {/* CHAT INTERFACE */}
-                <div className="lg:col-span-3 glass-panel rounded-[2.5rem] border border-white/5 flex flex-col overflow-hidden relative">
+                <div className="lg:col-span-3 glass-panel rounded-[3rem] border border-white/5 flex flex-col overflow-hidden relative shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
                     {/* Chat Header */}
-                    <div className="p-6 border-b border-white/5 bg-black/20 flex justify-between items-center">
-                        <div className="flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-2xl bg-black/60 flex items-center justify-center border border-white/10 ${selectedAgent.color}`}>
-                                <selectedAgent.icon className="w-6 h-6" />
+                    <div className="p-8 border-b border-white/5 bg-black/40 flex justify-between items-center backdrop-blur-xl relative z-20">
+                        <div className="flex items-center gap-5">
+                            <div className={`w-14 h-14 rounded-2xl bg-black/80 flex items-center justify-center border border-white/10 shadow-inner ${selectedAgent.color}`}>
+                                <selectedAgent.icon className="w-7 h-7" />
                             </div>
                             <div>
-                                <h3 className="text-lg font-black text-white tracking-tight">{selectedAgent.name} <span className="text-emerald-500/50 text-xs font-mono ml-2">v1.0.4</span></h3>
-                                <div className="flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                    <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Neural Link Established</span>
+                                <h3 className="text-2xl font-black text-white tracking-tighter flex items-center gap-3">
+                                    {selectedAgent.name} 
+                                    <span className="text-emerald-500/50 text-[10px] font-mono tracking-widest uppercase border border-emerald-500/20 px-2 py-0.5 rounded-md bg-emerald-500/5">v1.0.4</span>
+                                </h3>
+                                <div className="flex items-center gap-2 mt-1.5">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+                                    <span className="text-[10px] font-mono text-emerald-500/70 uppercase tracking-[0.2em] font-bold">Neural Link Established</span>
                                 </div>
                             </div>
                         </div>
                         <button 
                             onClick={() => setMessages([])}
-                            className="text-[10px] font-mono text-gray-600 hover:text-red-400 transition-colors uppercase tracking-widest"
+                            className="text-[10px] font-mono text-gray-500 hover:text-red-400 transition-colors uppercase tracking-[0.2em] font-bold px-4 py-2 rounded-xl hover:bg-red-500/10 border border-transparent hover:border-red-500/20"
                         >
                             Purge History
                         </button>
@@ -279,19 +283,23 @@ export function IntelligenceMode() {
                             {messages.map((msg) => (
                                 <motion.div
                                     key={msg.id}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    transition={{ duration: 0.4, ease: "easeOut" }}
+                                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-6`}
                                 >
-                                    <div className={`max-w-[80%] rounded-3xl p-5 ${
+                                    <div className={`max-w-[85%] rounded-[2rem] p-6 shadow-2xl ${
                                         msg.role === 'user' 
-                                            ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-50' 
-                                            : 'bg-black/60 border border-white/5 text-gray-300'
+                                            ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-50 backdrop-blur-xl rounded-tr-sm' 
+                                            : 'bg-black/80 border border-white/10 text-gray-200 backdrop-blur-xl rounded-tl-sm'
                                     }`}>
                                         {msg.role === 'agent' && (
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <span className={`text-[10px] font-black tracking-widest uppercase ${selectedAgent.color}`}>{msg.agentName}</span>
-                                                <span className="text-[8px] font-mono text-gray-600">{msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                            <div className="flex items-center gap-3 mb-4 pb-3 border-b border-white/5">
+                                                <div className={`w-6 h-6 rounded-full bg-black/60 border border-white/10 flex items-center justify-center ${selectedAgent.color}`}>
+                                                    <selectedAgent.icon className="w-3 h-3" />
+                                                </div>
+                                                <span className={`text-[10px] font-black tracking-[0.2em] uppercase ${selectedAgent.color}`}>{msg.agentName}</span>
+                                                <span className="text-[9px] font-mono text-gray-600 ml-auto">{msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                             </div>
                                         )}
                                         <div className="text-sm leading-relaxed whitespace-pre-wrap font-medium">
@@ -321,7 +329,7 @@ export function IntelligenceMode() {
                     </div>
 
                     {/* Input Area */}
-                    <div className="p-6 bg-black/40 border-t border-white/5">
+                    <div className="p-8 bg-black/60 border-t border-white/5 backdrop-blur-xl relative z-20">
                         <div className="relative">
                             <input 
                                 type="text"
@@ -329,17 +337,17 @@ export function IntelligenceMode() {
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                                 placeholder={`Transmit query to ${selectedAgent.name}...`}
-                                className="w-full bg-black/60 border border-white/10 rounded-2xl py-4 pl-6 pr-16 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/50 transition-all shadow-inner"
+                                className="w-full bg-black/80 border border-white/10 rounded-2xl py-5 pl-8 pr-20 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/50 transition-all shadow-inner"
                             />
                             <button 
-                                onClick={handleSend}
+                                onClick={() => handleSend()}
                                 disabled={!input.trim() || isTyping}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 w-12 h-12 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 w-14 h-14 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 flex items-center justify-center transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group border border-emerald-500/30 hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]"
                             >
-                                <Send className="w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                                <Send className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform duration-300" />
                             </button>
                         </div>
-                        <div className="mt-4 flex items-center justify-between px-2">
+                        <div className="mt-6 flex items-center justify-between px-4">
                             <div className="flex gap-4">
                                 <button 
                                     onClick={() => runQuickAction('audit')}

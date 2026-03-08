@@ -382,65 +382,67 @@ export default function App() {
                 )}
                 
                 {/* HEADER */}
-                <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12 glass-panel rounded-3xl p-8 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+                <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 mb-8 glass-panel rounded-3xl p-8 relative overflow-hidden shadow-2xl">
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+                    <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/3 pointer-events-none"></div>
                     
                     <div className="flex items-center gap-6 relative z-10">
-                        <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-emerald-900 rounded-2xl flex items-center justify-center text-2xl font-black shadow-[0_0_40px_rgba(16,185,129,0.3)] border border-emerald-400/30 relative group">
-                            <div className="absolute inset-0 bg-emerald-400/20 rounded-2xl blur-md group-hover:blur-xl transition-all duration-500"></div>
-                            <SpartaLogo className="w-8 h-8 text-white relative z-10" />
+                        <div className="w-20 h-20 bg-gradient-to-br from-emerald-400 to-emerald-900 rounded-3xl flex items-center justify-center text-3xl font-black shadow-[0_0_50px_rgba(16,185,129,0.4)] border border-emerald-400/40 relative group overflow-hidden">
+                            <div className="absolute inset-0 bg-emerald-400/20 rounded-3xl blur-md group-hover:blur-2xl transition-all duration-500"></div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                            <SpartaLogo className="w-10 h-10 text-white relative z-10 transform group-hover:scale-110 transition-transform duration-500" />
                         </div>
                         <div>
-                            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tighter text-white drop-shadow-lg">
-                                STRATOS<span className="text-emerald-400">.AI</span>
+                            <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white via-emerald-100 to-emerald-400 drop-shadow-lg">
+                                STRATOS<span className="text-emerald-500">.AI</span>
                             </h1>
-                            <div className="flex items-center gap-3 mt-2">
+                            <div className="flex items-center gap-3 mt-3 bg-black/40 w-fit px-4 py-1.5 rounded-full border border-white/5 backdrop-blur-md">
                                 <span className="flex h-2.5 w-2.5 relative">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]"></span>
                                 </span>
-                                <p className="text-emerald-500/80 text-xs sm:text-sm font-mono tracking-widest uppercase font-semibold">
+                                <p className="text-emerald-400/90 text-[10px] sm:text-xs font-mono tracking-[0.2em] uppercase font-bold">
                                     System Online • v24.0.1
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 sm:gap-6 w-full md:w-auto relative z-10">
-                        <div className="flex-1 md:flex-none flex items-center justify-between gap-6 bg-black/60 border border-white/10 rounded-2xl px-6 py-4 shadow-inner">
-                            <span className="text-xs text-gray-500 font-mono uppercase tracking-widest">Synergy</span>
-                            <div className="text-lg font-mono font-bold text-emerald-400">
-                                {Math.min(100, getActiveServicesCount() * 10)}<span className="text-emerald-500/50 text-sm ml-1">%</span>
+                    <div className="flex flex-wrap items-center gap-4 sm:gap-6 w-full lg:w-auto relative z-10">
+                        <div className="flex-1 lg:flex-none flex flex-col gap-1 bg-black/60 border border-white/10 rounded-2xl px-6 py-4 shadow-inner hover:border-emerald-500/30 transition-colors group">
+                            <span className="text-[10px] text-gray-500 font-mono uppercase tracking-[0.2em] group-hover:text-emerald-500/70 transition-colors">Synergy</span>
+                            <div className="text-2xl font-mono font-black text-emerald-400 flex items-baseline gap-1">
+                                {Math.min(100, getActiveServicesCount() * 10)}<span className="text-emerald-500/50 text-sm">%</span>
                             </div>
                         </div>
 
-                        <div className="flex-1 md:flex-none flex items-center justify-between gap-6 bg-black/60 border border-white/10 rounded-2xl px-6 py-4 shadow-inner">
-                            <span className="text-xs text-gray-500 font-mono uppercase tracking-widest">Bankroll</span>
+                        <div className="flex-1 lg:flex-none flex flex-col gap-1 bg-black/60 border border-white/10 rounded-2xl px-6 py-4 shadow-inner hover:border-emerald-500/30 transition-colors group">
+                            <span className="text-[10px] text-gray-500 font-mono uppercase tracking-[0.2em] group-hover:text-emerald-500/70 transition-colors">Bankroll</span>
                             <div className="flex items-center">
-                                <span className="text-emerald-500 font-mono mr-1.5 font-bold">$</span>
+                                <span className="text-emerald-500 font-mono mr-1.5 font-bold text-xl">$</span>
                                 <input
                                     type="number"
                                     value={bankroll}
                                     step="10"
                                     min="100"
-                                    className="bg-transparent font-mono text-2xl font-bold w-28 text-right focus:outline-none focus:text-emerald-400 transition-colors text-white"
+                                    className="bg-transparent font-mono text-2xl font-black w-28 focus:outline-none focus:text-emerald-400 transition-colors text-white"
                                     onChange={(e) => saveBankroll(parseFloat(e.target.value))}
                                 />
                             </div>
                         </div>
 
-                        <div className="flex-1 md:flex-none flex items-center justify-between gap-6 bg-black/60 border border-white/10 rounded-2xl px-6 py-4 shadow-inner">
-                            <span className="text-xs text-gray-500 font-mono uppercase tracking-widest">Win Rate</span>
-                            <div className="text-3xl font-mono font-bold text-white">
-                                {successRate}<span className="text-emerald-500 text-xl ml-1">%</span>
+                        <div className="flex-1 lg:flex-none flex flex-col gap-1 bg-black/60 border border-white/10 rounded-2xl px-6 py-4 shadow-inner hover:border-emerald-500/30 transition-colors group">
+                            <span className="text-[10px] text-gray-500 font-mono uppercase tracking-[0.2em] group-hover:text-emerald-500/70 transition-colors">Win Rate</span>
+                            <div className="text-2xl font-mono font-black text-white flex items-baseline gap-1">
+                                {successRate}<span className="text-emerald-500 text-sm">%</span>
                             </div>
                         </div>
                     </div>
                 </header>
 
-                <div className="flex justify-center mb-12 relative z-10">
-                    <div className="glass-panel p-1.5 rounded-2xl flex gap-1 relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent pointer-events-none"></div>
+                <div className="flex justify-center mb-12 relative z-10 sticky top-4">
+                    <div className="glass-panel p-2 rounded-2xl flex flex-wrap justify-center gap-2 relative overflow-hidden shadow-2xl border border-white/10 backdrop-blur-xl bg-black/40">
+                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-blue-500/5 pointer-events-none"></div>
                         
                         {[
                             { id: 'SPARTA', label: 'SPARTA LOGIC', icon: SpartaLogo },
@@ -452,14 +454,22 @@ export default function App() {
                             <button 
                                 key={item.id}
                                 onClick={() => setMode(item.id as any)}
-                                className={`relative z-10 px-6 py-3 rounded-xl font-bold text-[10px] tracking-[0.2em] transition-all duration-500 flex items-center gap-2 uppercase ${
+                                className={`relative z-10 px-6 py-3.5 rounded-xl font-bold text-[10px] tracking-[0.2em] transition-all duration-500 flex items-center gap-3 uppercase overflow-hidden group ${
                                     mode === item.id 
-                                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.1)]' 
-                                        : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'
+                                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.15)]' 
+                                        : 'text-gray-400 hover:text-white hover:bg-white/10 border border-transparent'
                                 }`}
                             >
-                                <item.icon className={`w-3.5 h-3.5 ${mode === item.id ? 'text-emerald-400' : 'text-gray-600'}`} />
-                                {item.label}
+                                {mode === item.id && (
+                                    <motion.div 
+                                        layoutId="activeTab" 
+                                        className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-transparent opacity-50"
+                                        initial={false}
+                                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                    />
+                                )}
+                                <item.icon className={`w-4 h-4 relative z-10 transition-transform duration-300 group-hover:scale-110 ${mode === item.id ? 'text-emerald-400' : 'text-gray-500 group-hover:text-gray-300'}`} />
+                                <span className="relative z-10">{item.label}</span>
                             </button>
                         ))}
                     </div>

@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { getAdvancedMetrics } from "./api";
+import { getAdvancedMetrics } from "../api/footballApi";
 
 export interface SpartaMatrix {
     home: Record<string, number>;

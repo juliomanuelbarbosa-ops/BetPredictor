@@ -1,5 +1,5 @@
 import * as tf from '@tensorflow/tfjs';
-import { footballData } from './data';
+import { footballData } from '../api/mockData';
 
 let ensembleModels: tf.Sequential[] = [];
 

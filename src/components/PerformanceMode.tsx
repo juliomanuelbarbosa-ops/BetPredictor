@@ -139,29 +139,29 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, b
     ];
 
     return (
-        <div className="max-w-7xl mx-auto py-8 px-4 space-y-8">
+        <div className="max-w-7xl mx-auto py-8 px-4 space-y-10">
             {/* TOP STATS GRID */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {stats.map((stat, idx) => (
                     <motion.div 
                         key={idx}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.1 }}
-                        className="glass-panel p-6 rounded-2xl border border-white/5 flex flex-col gap-4 relative overflow-hidden group"
+                        className="glass-panel p-8 rounded-3xl border border-white/5 flex flex-col gap-6 relative overflow-hidden group hover:border-emerald-500/30 transition-all duration-500 hover:shadow-[0_10px_40px_rgba(16,185,129,0.1)] hover:-translate-y-1"
                     >
-                        <div className={`absolute top-0 right-0 w-24 h-24 ${stat.bg} blur-3xl -mr-12 -mt-12 transition-all duration-500 group-hover:scale-150`}></div>
+                        <div className={`absolute top-0 right-0 w-32 h-32 ${stat.bg} blur-[50px] -mr-16 -mt-16 transition-all duration-700 group-hover:scale-150 group-hover:opacity-70 opacity-30`}></div>
                         <div className="flex items-center justify-between relative z-10">
-                            <div className={`p-2.5 rounded-xl ${stat.bg} ${stat.color}`}>
-                                <stat.icon className="w-5 h-5" />
+                            <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color} border border-white/5 shadow-inner`}>
+                                <stat.icon className="w-6 h-6" />
                             </div>
-                            <span className={`text-2xl font-mono font-bold ${stat.color}`}>{stat.value}</span>
+                            <span className={`text-3xl font-mono font-black tracking-tighter ${stat.color}`}>{stat.value}</span>
                         </div>
                         <div className="relative z-10">
-                            <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">{stat.label}</p>
-                            <div className="flex items-center gap-1 mt-1">
-                                <Activity className="w-3 h-3 text-gray-600" />
-                                <span className="text-[10px] text-gray-600 font-mono">Live System Tracking</span>
+                            <p className="text-xs font-mono text-gray-400 uppercase tracking-[0.2em]">{stat.label}</p>
+                            <div className="flex items-center gap-1.5 mt-2">
+                                <Activity className="w-3.5 h-3.5 text-emerald-500/70" />
+                                <span className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Live System Tracking</span>
                             </div>
                         </div>
                     </motion.div>
@@ -171,8 +171,9 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, b
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* MAIN CHART AREA */}
                 <div className="lg:col-span-2 space-y-8">
-                    <div className="glass-panel p-8 rounded-3xl border border-white/5 h-[450px] flex flex-col relative overflow-hidden">
+                    <div className="glass-panel p-8 rounded-3xl border border-white/5 h-[450px] flex flex-col relative overflow-hidden group hover:border-emerald-500/30 transition-all duration-500 hover:shadow-[0_10px_40px_rgba(16,185,129,0.1)]">
                         <div className="absolute top-0 left-0 w-full h-full bg-grid-white opacity-20 pointer-events-none"></div>
+                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
                         <div className="flex items-center justify-between mb-8 relative z-10">
                             <div>
                                 <h3 className="text-white font-bold text-lg flex items-center gap-3">
@@ -236,12 +237,13 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, b
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="glass-panel p-8 rounded-3xl border border-white/5 h-[300px] flex flex-col">
-                            <h4 className="text-white font-bold text-sm mb-6 uppercase tracking-widest opacity-50 flex items-center gap-2">
+                        <div className="glass-panel p-8 rounded-3xl border border-white/5 h-[300px] flex flex-col relative overflow-hidden group hover:border-emerald-500/30 transition-all duration-500 hover:shadow-[0_10px_40px_rgba(16,185,129,0.1)]">
+                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+                            <h4 className="text-white font-bold text-sm mb-6 uppercase tracking-widest opacity-50 flex items-center gap-2 relative z-10">
                                 <Brain className="w-4 h-4" />
                                 Model Calibration
                             </h4>
-                            <div className="flex-1 w-full">
+                            <div className="flex-1 w-full relative z-10">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <ScatterChart>
                                         <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" />
@@ -255,12 +257,13 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, b
                             </div>
                         </div>
 
-                        <div className="glass-panel p-8 rounded-3xl border border-white/5 flex flex-col">
-                            <h4 className="text-white font-bold text-sm mb-6 uppercase tracking-widest opacity-50 flex items-center gap-2">
+                        <div className="glass-panel p-8 rounded-3xl border border-white/5 flex flex-col relative overflow-hidden group hover:border-emerald-500/30 transition-all duration-500 hover:shadow-[0_10px_40px_rgba(16,185,129,0.1)]">
+                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+                            <h4 className="text-white font-bold text-sm mb-6 uppercase tracking-widest opacity-50 flex items-center gap-2 relative z-10">
                                 <PieChart className="w-4 h-4" />
                                 League Dominance
                             </h4>
-                            <div className="space-y-5 flex-1 flex flex-col justify-center">
+                            <div className="space-y-5 flex-1 flex flex-col justify-center relative z-10">
                                 {leagueStats.length > 0 ? leagueStats.map((l, idx) => (
                                     <div key={idx} className="space-y-2">
                                         <div className="flex items-center justify-between">
@@ -285,35 +288,36 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, b
                 </div>
 
                 {/* SIDEBAR: ACTIVITY & LOGS */}
-                <div className="space-y-6">
-                    <div className="glass-panel p-8 rounded-3xl border border-white/5">
-                        <h3 className="text-white font-bold text-lg mb-6 flex items-center gap-3">
+                <div className="space-y-8">
+                    <div className="glass-panel p-8 rounded-3xl border border-white/5 relative overflow-hidden group hover:border-emerald-500/30 transition-all duration-500 hover:shadow-[0_10px_40px_rgba(16,185,129,0.1)]">
+                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+                        <h3 className="text-white font-bold text-lg mb-6 flex items-center gap-3 relative z-10">
                             <History className="w-5 h-5 text-blue-400" />
                             System Log
                         </h3>
-                        <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                        <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar relative z-10">
                             {predictions.map((pred, idx) => (
                                 <motion.div 
                                     key={idx}
                                     initial={{ opacity: 0, x: 20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: idx * 0.05 }}
-                                    className="p-4 rounded-xl bg-white/5 border border-white/5 space-y-2"
+                                    className="p-5 rounded-2xl bg-black/40 border border-white/5 space-y-3 hover:border-white/10 transition-colors"
                                 >
                                     <div className="flex items-center justify-between">
-                                        <span className="text-[9px] font-mono text-gray-500">{new Date(pred.game.commence_time).toLocaleDateString()}</span>
+                                        <span className="text-[10px] font-mono text-gray-500 tracking-widest uppercase">{new Date(pred.game.commence_time).toLocaleDateString()}</span>
                                         {pred.actual === 'WON' ? (
-                                            <span className="text-[8px] font-mono text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded border border-emerald-400/20">SUCCESS</span>
+                                            <span className="text-[9px] font-mono text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded border border-emerald-400/20 tracking-widest">SUCCESS</span>
                                         ) : pred.actual === 'LOST' ? (
-                                            <span className="text-[8px] font-mono text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded border border-red-400/20">FAILED</span>
+                                            <span className="text-[9px] font-mono text-red-400 bg-red-400/10 px-2 py-1 rounded border border-red-400/20 tracking-widest">FAILED</span>
                                         ) : (
-                                            <span className="text-[8px] font-mono text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded border border-blue-400/20">PENDING</span>
+                                            <span className="text-[9px] font-mono text-blue-400 bg-blue-400/10 px-2 py-1 rounded border border-blue-400/20 tracking-widest">PENDING</span>
                                         )}
                                     </div>
-                                    <p className="text-xs text-white font-bold leading-tight">{pred.game.home} v {pred.game.away}</p>
-                                    <div className="flex items-center justify-between text-[10px] font-mono">
-                                        <span className="text-gray-500">{pred.bestBet}</span>
-                                        <span className="text-emerald-400/70">{pred.confidence}% CONF</span>
+                                    <p className="text-sm text-white font-bold leading-tight tracking-tight">{pred.game.home} <span className="text-gray-600 font-normal italic text-xs mx-1">vs</span> {pred.game.away}</p>
+                                    <div className="flex items-center justify-between text-xs font-mono">
+                                        <span className="text-gray-400 font-bold">{pred.bestBet}</span>
+                                        <span className="text-emerald-400/80">{pred.confidence}% CONF</span>
                                     </div>
                                 </motion.div>
                             ))}
@@ -326,12 +330,12 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, b
                         </div>
                     </div>
 
-                    <div className="glass-panel p-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/5">
+                    <div className="glass-panel p-8 rounded-3xl border border-emerald-500/20 bg-emerald-500/5 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
                         <div className="flex items-center gap-3 mb-4">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                            <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest">Stratos Core Active</span>
+                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.8)]"></div>
+                            <span className="text-xs font-mono text-emerald-400 uppercase tracking-widest font-bold">Stratos Core Active</span>
                         </div>
-                        <p className="text-[10px] text-emerald-400/70 font-mono leading-relaxed">
+                        <p className="text-xs text-emerald-400/70 font-mono leading-relaxed">
                             Neural network ensemble currently processing historical match vectors. Real-time calibration active.
                         </p>
                     </div>
