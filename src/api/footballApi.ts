@@ -26,6 +26,9 @@ export const API_KEYS = {
     get MISTRAL() { return getApiKey("VITE_MISTRAL_API_KEY"); },
     get PERPLEXITY() { return getApiKey("VITE_PERPLEXITY_API_KEY"); },
     get GROQ() { return getApiKey("VITE_GROQ_API_KEY"); },
+    get NEWSAPI() { return getApiKey("VITE_NEWSAPI_KEY"); },
+    get X_API() { return getApiKey("VITE_X_API_KEY"); },
+    get OPENROUTER() { return getApiKey("VITE_OPENROUTER_API_KEY"); },
 };
 
 export const getActiveServicesCount = () => {
@@ -254,6 +257,40 @@ export async function getAdvancedMetrics(team: string) {
     };
 }
 
+export async function fetchNews(home: string, away: string) {
+    if (!API_KEYS.NEWSAPI) return "No NewsAPI key configured. Assuming standard conditions.";
+    try {
+        const query = encodeURIComponent(`${home} OR ${away} football injury OR transfer`);
+        const res = await secureFetch(`https://newsapi.org/v2/everything?q=${query}&sortBy=publishedAt&pageSize=3&apiKey=${API_KEYS.NEWSAPI}`, {}, 'NewsAPI');
+        if (res.articles && res.articles.length > 0) {
+            return res.articles.map((a: any) => `- ${a.title}`).join('\n');
+        }
+        return "No significant recent news found.";
+    } catch (e) {
+        return "Failed to fetch news.";
+    }
+}
+
+export async function getComprehensiveMatchData(home: string, away: string, league: string) {
+    // Run multiple API calls in parallel to improve API cooperation and integration
+    const [weather, odds, homeAdv, awayAdv, news] = await Promise.all([
+        getWeather(home).catch(() => ({ temp: 15, wind_speed: 5, rain: 0, provider: 'Fallback' })),
+        getRealOdds(home, away, league).catch(() => ({ avgH: 2.5, avgD: 3.0, avgA: 2.8, provider: 'Fallback' })),
+        getAdvancedMetrics(home),
+        getAdvancedMetrics(away),
+        fetchNews(home, away).catch(() => "No recent news.")
+    ]);
+
+    return {
+        weather,
+        odds,
+        h2h: footballData.getH2H(home, away),
+        homeAdv,
+        awayAdv,
+        news
+    };
+}
+
 export async function getUpcomingGames() {
     const leagues = [
         "soccer_epl", "soccer_germany_bundesliga", "soccer_spain_la_liga", "soccer_italy_serie_a",
@@ -326,6 +363,134 @@ export async function getUpcomingGames() {
         }
         return MOCK_GAMES;
     }
+}
+
+export async function getSimulationReviews(matchInput: string, combatResult: any) {
+    const reviews: { provider: string, review: string }[] = [];
+    const prompt = `A Monte Carlo simulation (10,000 iterations) was just run for the match: ${matchInput}.
+The results are:
+Home Win Probability: ${combatResult.homeWins.toFixed(1)}%
+Draw Probability: ${combatResult.draws.toFixed(1)}%
+Away Win Probability: ${combatResult.awayWins.toFixed(1)}%
+Most Likely Score: ${combatResult.mostLikelyScore}
+
+Please provide a brief, 2-3 sentence expert review of these results. What is the best betting angle?`;
+
+    const systemPrompt = "You are an expert sports betting analyst.";
+
+    const promises = [];
+
+    if (API_KEYS.GEMINI) {
+        promises.push((async () => {
+            try {
+                const { GoogleGenAI } = await import('@google/genai');
+                const ai = new GoogleGenAI({ apiKey: API_KEYS.GEMINI });
+                const response = await ai.models.generateContent({
+                    model: "gemini-3-flash-preview",
+                    contents: prompt,
+                    config: { systemInstruction: systemPrompt }
+                });
+                reviews.push({ provider: 'Google Gemini', review: response.text || "No response." });
+            } catch (e) { console.error(e); }
+        })());
+    }
+
+    if (API_KEYS.OPENAI) {
+        promises.push((async () => {
+            try {
+                const res = await fetch("https://api.openai.com/v1/chat/completions", {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${API_KEYS.OPENAI}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "system", content: systemPrompt }, { role: "user", content: prompt }] })
+                });
+                const data = await res.json();
+                if (data.choices) reviews.push({ provider: 'OpenAI', review: data.choices[0].message.content });
+            } catch (e) { console.error(e); }
+        })());
+    }
+
+    if (API_KEYS.ANTHROPIC) {
+        promises.push((async () => {
+            try {
+                const res = await fetch("https://api.anthropic.com/v1/messages", {
+                    method: "POST",
+                    headers: { 
+                        "x-api-key": API_KEYS.ANTHROPIC, 
+                        "anthropic-version": "2023-06-01",
+                        "anthropic-dangerously-allow-browser": "true",
+                        "Content-Type": "application/json" 
+                    },
+                    body: JSON.stringify({ 
+                        model: "claude-3-haiku-20240307", 
+                        max_tokens: 150,
+                        system: systemPrompt,
+                        messages: [{ role: "user", content: prompt }] 
+                    })
+                });
+                const data = await res.json();
+                if (data.content) reviews.push({ provider: 'Anthropic', review: data.content[0].text });
+            } catch (e) { console.error(e); }
+        })());
+    }
+
+    if (API_KEYS.GROQ) {
+        promises.push((async () => {
+            try {
+                const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${API_KEYS.GROQ}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({ model: "llama3-8b-8192", messages: [{ role: "system", content: systemPrompt }, { role: "user", content: prompt }] })
+                });
+                const data = await res.json();
+                if (data.choices) reviews.push({ provider: 'Groq', review: data.choices[0].message.content });
+            } catch (e) { console.error(e); }
+        })());
+    }
+
+    if (API_KEYS.MISTRAL) {
+        promises.push((async () => {
+            try {
+                const res = await fetch("https://api.mistral.ai/v1/chat/completions", {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${API_KEYS.MISTRAL}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "system", content: systemPrompt }, { role: "user", content: prompt }] })
+                });
+                const data = await res.json();
+                if (data.choices) reviews.push({ provider: 'Mistral AI', review: data.choices[0].message.content });
+            } catch (e) { console.error(e); }
+        })());
+    }
+
+    if (API_KEYS.OPENROUTER) {
+        promises.push((async () => {
+            try {
+                const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${API_KEYS.OPENROUTER}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({ model: "meta-llama/llama-3-8b-instruct:free", messages: [{ role: "system", content: systemPrompt }, { role: "user", content: prompt }] })
+                });
+                const data = await res.json();
+                if (data.choices) reviews.push({ provider: 'OpenRouter', review: data.choices[0].message.content });
+            } catch (e) { console.error(e); }
+        })());
+    }
+
+    if (API_KEYS.BYTEZ) {
+        promises.push((async () => {
+            try {
+                const res = await fetch("https://api.bytez.com/models/v2/meta-llama/Meta-Llama-3-8B-Instruct", {
+                    method: "POST",
+                    headers: { "Authorization": `Key ${API_KEYS.BYTEZ}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({ messages: [{ role: "system", content: systemPrompt }, { role: "user", content: prompt }] })
+                });
+                const data = await res.json();
+                if (data.output) reviews.push({ provider: 'Bytez', review: data.output.content });
+            } catch (e) { console.error(e); }
+        })());
+    }
+
+    await Promise.all(promises);
+    return reviews;
 }
 
 export async function getBytezAnalysis(home: string, away: string, weather: any, odds: any, betstack: any): Promise<{ category: string, market: string, confidence: number, report: string, provider: string }> {

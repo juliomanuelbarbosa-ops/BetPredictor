@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { getAdvancedMetrics } from "../api/footballApi";
+import { getComprehensiveMatchData } from "../api/footballApi";
 
 export interface SpartaMatrix {
     home: Record<string, number>;
@@ -10,6 +10,7 @@ export interface SpartaMatrix {
         home_fatigue: number;
         away_fatigue: number;
         derby_factor: number;
+        market_confidence: number;
     }
 }
 
@@ -25,11 +26,15 @@ export interface SimulationResult {
     btts: number;
     homeCleanSheet: number;
     awayCleanSheet: number;
+    evHome: number;
+    evAway: number;
 }
 
 export async function initializeSpartaMatrix(homeTeam: string, awayTeam: string): Promise<SpartaMatrix> {
-    const homeAdv = await getAdvancedMetrics(homeTeam);
-    const awayAdv = await getAdvancedMetrics(awayTeam);
+    // Improve API cooperation by fetching comprehensive data
+    const matchData = await getComprehensiveMatchData(homeTeam, awayTeam, "Unknown");
+    const homeAdv = matchData.homeAdv;
+    const awayAdv = matchData.awayAdv;
 
     const createTeamMatrix = (adv: any) => {
         const baseMatrix: Record<string, number> = {
@@ -58,16 +63,23 @@ export async function initializeSpartaMatrix(homeTeam: string, awayTeam: string)
 
     // Contextual factors
     const isDerby = (homeTeam === 'Arsenal' && awayTeam === 'Tottenham') || (homeTeam === 'Manchester City' && awayTeam === 'Manchester United') ? 1.2 : 1.0;
+    
+    // Weather impact calculation
+    let weatherImpact = 1.0;
+    if (matchData.weather.rain > 0 || matchData.weather.wind_speed > 10) {
+        weatherImpact = 0.9; // Bad weather reduces expected goals
+    }
 
     return {
         home: homeMatrix,
         away: awayMatrix,
         matchContext: {
-            weather_impact: 1.0 + (Math.random() * 0.1 - 0.05), // +/- 5% impact
+            weather_impact: weatherImpact,
             referee_strictness: 1.0 + (Math.random() * 0.2 - 0.1), // +/- 10% impact on cards/penalties
             home_fatigue: Math.max(0.8, Math.min(1.2, 5 / homeMatrix.rest_days)), // 5 days is baseline
             away_fatigue: Math.max(0.8, Math.min(1.2, 5 / awayMatrix.rest_days)),
-            derby_factor: isDerby
+            derby_factor: isDerby,
+            market_confidence: matchData.odds.avgH ? (1 / matchData.odds.avgH) : 0.5
         }
     };
 }
@@ -145,10 +157,20 @@ export function runMonteCarlo(matrix: SpartaMatrix, iterations: number = 10000):
         }
     }
 
+    const homeWinProb = (homeWins / iterations);
+    const awayWinProb = (awayWins / iterations);
+    
+    // Calculate Expected Value (EV) based on market confidence
+    const impliedHomeProb = matrix.matchContext.market_confidence;
+    const impliedAwayProb = 1 - impliedHomeProb; // Simplified
+    
+    const evHome = (homeWinProb * (1 / impliedHomeProb)) - 1;
+    const evAway = (awayWinProb * (1 / impliedAwayProb)) - 1;
+
     return {
-        homeWins: (homeWins / iterations) * 100,
+        homeWins: homeWinProb * 100,
         draws: (draws / iterations) * 100,
-        awayWins: (awayWins / iterations) * 100,
+        awayWins: awayWinProb * 100,
         homeGoalsAvg: homeGoalsTotal / iterations,
         awayGoalsAvg: awayGoalsTotal / iterations,
         mostLikelyScore,
@@ -156,7 +178,9 @@ export function runMonteCarlo(matrix: SpartaMatrix, iterations: number = 10000):
         under25: ((iterations - over25Count) / iterations) * 100,
         btts: (bttsCount / iterations) * 100,
         homeCleanSheet: (homeCleanSheetCount / iterations) * 100,
-        awayCleanSheet: (awayCleanSheetCount / iterations) * 100
+        awayCleanSheet: (awayCleanSheetCount / iterations) * 100,
+        evHome: evHome * 100,
+        evAway: evAway * 100
     };
 }
 

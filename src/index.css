@@ -1,9 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
@@ -12,10 +14,17 @@ body {
   font-family: "Inter", sans-serif;
   -webkit-font-smoothing: antialiased;
   background-image: 
-    radial-gradient(circle at 15% 50%, rgba(16, 185, 129, 0.05), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.03), transparent 25%);
+    radial-gradient(circle at 15% 50%, rgba(16, 185, 129, 0.08), transparent 35%),
+    radial-gradient(circle at 85% 30%, rgba(59, 130, 246, 0.05), transparent 35%),
+    radial-gradient(circle at 50% 80%, rgba(16, 185, 129, 0.03), transparent 40%);
   background-attachment: fixed;
   overflow-x: hidden;
+  animation: pulse-bg 15s ease-in-out infinite alternate;
+}
+
+@keyframes pulse-bg {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 100% 100%; }
 }
 
 /* Grid overlay */
@@ -26,9 +35,9 @@ body::before {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-image: linear-gradient(to right, rgba(255,255,255,0.01) 1px, transparent 1px),
-                    linear-gradient(to bottom, rgba(255,255,255,0.01) 1px, transparent 1px);
-  background-size: 60px 60px;
+  background-image: linear-gradient(to right, rgba(255,255,255,0.015) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size: 40px 40px;
   pointer-events: none;
   z-index: -1;
 }
@@ -41,7 +50,7 @@ body::after {
   left: 0;
   width: 100%;
   height: 2px;
-  background: linear-gradient(to right, transparent, rgba(16, 185, 129, 0.1), transparent);
+  background: linear-gradient(to right, transparent, rgba(16, 185, 129, 0.15), transparent);
   opacity: 0.5;
   z-index: 100;
   pointer-events: none;
@@ -55,26 +64,38 @@ body::after {
 
 /* Glassmorphism utilities */
 .glass-panel {
-  background: rgba(10, 10, 10, 0.4);
+  background: rgba(10, 10, 10, 0.5);
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+  position: relative;
+}
+
+.glass-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  opacity: 0.5;
 }
 
 .glass-card {
   background: linear-gradient(145deg, rgba(20, 20, 20, 0.6) 0%, rgba(5, 5, 5, 0.8) 100%);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.6);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.02);
   position: relative;
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-card:hover {
-  border-color: rgba(16, 185, 129, 0.2);
-  transform: translateY(-2px);
-  box-shadow: 0 20px 60px 0 rgba(0, 0, 0, 0.8), 0 0 20px rgba(16, 185, 129, 0.05);
+  border-color: rgba(16, 185, 129, 0.3);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 60px 0 rgba(0, 0, 0, 0.8), 0 0 30px rgba(16, 185, 129, 0.1);
 }
 
 .glass-card::before {
@@ -89,18 +110,25 @@ body::after {
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.2);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(16, 185, 129, 0.5);
+}
+
+/* Noise overlay */
+.bg-noise {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
 }
 
 /* Progress bar animation */
@@ -117,4 +145,19 @@ body::after {
 }
 .glow-box {
   box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+}
+
+/* Hide scrollbar for horizontal scrolling containers */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }

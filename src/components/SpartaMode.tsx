@@ -13,6 +13,7 @@ interface SpartaModeProps {
     stratosResult: any;
     spartaMatrix: any;
     combatResult: any;
+    aiReviews?: { provider: string, review: string }[];
     runCombat: () => void;
     resetSparta: () => void;
 }
@@ -27,6 +28,7 @@ export function SpartaMode({
     stratosResult,
     spartaMatrix,
     combatResult,
+    aiReviews,
     runCombat,
     resetSparta
 }: SpartaModeProps) {
@@ -65,7 +67,7 @@ export function SpartaMode({
                                 <Cpu className="w-6 h-6" />
                             </div>
                             <div>
-                                <h2 className="text-2xl font-black text-white tracking-tighter">Sparta Matrix</h2>
+                                <h2 className="text-2xl font-display font-bold text-white tracking-tighter">Sparta Matrix</h2>
                                 <p className="text-[10px] font-mono text-emerald-500/70 uppercase tracking-[0.2em] mt-1 font-bold">Protocol v4.2.0-Alpha</p>
                             </div>
                         </div>
@@ -75,7 +77,7 @@ export function SpartaMode({
                                 <input 
                                     type="text" 
                                     placeholder="HOME VS AWAY" 
-                                    className="w-full bg-black/60 border border-white/10 rounded-2xl px-6 py-5 text-white focus:outline-none focus:border-emerald-500/50 transition-all font-mono text-sm uppercase tracking-widest placeholder:text-gray-700 shadow-inner group-hover:border-white/20"
+                                    className="w-full bg-black/60 border border-white/10 rounded-2xl px-6 py-5 text-white focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono text-sm uppercase tracking-widest placeholder:text-gray-700 shadow-inner group-hover:border-white/20"
                                     value={matchInput}
                                     onChange={(e) => setMatchInput(e.target.value)}
                                     disabled={isLoading || phase === 'COMBAT'}
@@ -89,7 +91,7 @@ export function SpartaMode({
                             <button 
                                 onClick={initializeStratos}
                                 disabled={isLoading || phase === 'COMBAT'}
-                                className="w-full bg-emerald-500 text-black py-5 rounded-2xl font-black tracking-[0.2em] transition-all duration-300 disabled:opacity-30 disabled:grayscale hover:bg-emerald-400 hover:shadow-[0_0_40px_rgba(16,185,129,0.3)] flex items-center justify-center gap-3 uppercase text-xs group"
+                                className="w-full bg-emerald-500 text-black py-5 rounded-2xl font-black tracking-[0.2em] transition-all duration-300 disabled:opacity-30 disabled:grayscale hover:bg-emerald-400 hover:shadow-[0_0_40px_rgba(16,185,129,0.3)] flex items-center justify-center gap-3 uppercase text-xs group animate-pulse hover:animate-none"
                             >
                                 {isLoading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5 group-hover:scale-125 transition-transform duration-300" />}
                                 Initialize Protocol
@@ -137,19 +139,26 @@ export function SpartaMode({
                     </div>
 
                     {/* SYSTEM LOG PANEL */}
-                    <div className="glass-panel p-6 rounded-[2rem] border border-white/5 h-[320px] flex flex-col shadow-inner relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-[50px] -mr-16 -mt-16 pointer-events-none"></div>
+                    <div className="glass-panel p-6 rounded-[2rem] border border-white/5 h-[320px] flex flex-col shadow-inner relative overflow-hidden group hover:border-emerald-500/30 transition-colors">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-[50px] -mr-16 -mt-16 pointer-events-none group-hover:bg-emerald-500/10 transition-colors duration-500"></div>
                         <div className="flex items-center gap-3 mb-5 relative z-10">
-                            <Terminal className="w-4 h-4 text-emerald-500" />
+                            <Terminal className="w-4 h-4 text-emerald-500 group-hover:animate-pulse" />
                             <h3 className="text-[10px] font-mono text-gray-400 uppercase tracking-[0.2em] font-bold">Live System Feed</h3>
                         </div>
                         <div className="flex-1 font-mono text-[10px] text-emerald-500/80 overflow-y-auto space-y-1.5 custom-scrollbar relative z-10 pr-2">
-                            {logs.map((log, i) => (
-                                <div key={i} className="flex gap-2">
-                                    <span className="opacity-30">[{i}]</span>
-                                    <span>{log}</span>
-                                </div>
-                            ))}
+                            <AnimatePresence>
+                                {logs.map((log, i) => (
+                                    <motion.div 
+                                        key={i} 
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        className="flex gap-2"
+                                    >
+                                        <span className="opacity-30">[{i}]</span>
+                                        <span className={log.includes('ERROR') ? 'text-red-400' : log.includes('SUCCESS') ? 'text-emerald-400 font-bold' : ''}>{log}</span>
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
                             <div ref={logEndRef} />
                             {!isLoading && logs.length === 0 && (
                                 <div className="h-full flex items-center justify-center opacity-20 italic">
@@ -168,18 +177,18 @@ export function SpartaMode({
                                 key="empty"
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                className="h-full min-h-[500px] glass-panel rounded-[3rem] border border-white/5 border-dashed flex flex-col items-center justify-center text-center p-12 relative overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
+                                className="h-full min-h-[500px] glass-panel rounded-[3rem] border border-white/5 border-dashed flex flex-col items-center justify-center text-center p-12 relative overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.5)] group hover:border-emerald-500/30 transition-colors"
                             >
                                 <div className="absolute inset-0 bg-grid-white opacity-5 pointer-events-none"></div>
-                                <div className="w-28 h-28 rounded-full bg-black/40 flex items-center justify-center mb-8 border border-white/5 shadow-inner relative z-10">
-                                    <SpartaLogo className="w-14 h-14 text-gray-600" />
+                                <div className="w-28 h-28 rounded-full bg-black/40 flex items-center justify-center mb-8 border border-white/5 shadow-inner relative z-10 group-hover:border-emerald-500/30 transition-colors">
+                                    <SpartaLogo className="w-14 h-14 text-gray-600 group-hover:text-emerald-500/50 transition-colors" />
                                 </div>
                                 <h3 className="text-gray-400 font-mono text-xs uppercase tracking-[0.4em] mb-4 relative z-10 font-bold">Awaiting Initialization</h3>
                                 <p className="text-gray-500 text-sm max-w-md leading-relaxed relative z-10">Enter match parameters and initialize the Sparta protocol to begin the 10,000-iteration Monte Carlo simulation.</p>
                                 
                                 <div className="mt-16 grid grid-cols-3 gap-12 opacity-20 relative z-10">
                                     {[Layers, Activity, Eye].map((Icon, i) => (
-                                        <div key={i} className="flex flex-col items-center gap-3">
+                                        <div key={i} className="flex flex-col items-center gap-3 animate-pulse" style={{ animationDelay: `${i * 200}ms` }}>
                                             <Icon className="w-8 h-8" />
                                             <div className="w-16 h-1 bg-white/10 rounded-full"></div>
                                         </div>
@@ -198,7 +207,7 @@ export function SpartaMode({
                                     
                                     <div className="flex items-center justify-between mb-12 relative z-10">
                                         <div>
-                                            <h3 className="text-white font-black text-2xl flex items-center gap-4 tracking-tighter">
+                                            <h3 className="text-white font-display font-bold text-2xl flex items-center gap-4 tracking-tighter">
                                                 <Activity className="w-7 h-7 text-emerald-400" />
                                                 Simulation Output
                                             </h3>
@@ -216,12 +225,12 @@ export function SpartaMode({
                                             { label: 'Draw', value: combatResult ? combatResult.draws : stratosResult.draws, prev: combatResult ? stratosResult.draws : null, color: 'text-gray-400', bg: 'bg-gray-500/10' },
                                             { label: 'Away Win', value: combatResult ? combatResult.awayWins : stratosResult.awayWins, prev: combatResult ? stratosResult.awayWins : null, color: 'text-blue-400', bg: 'bg-blue-500/10' }
                                         ].map((res, i) => (
-                                            <div key={i} className="bg-black/60 p-8 rounded-[2rem] border border-white/5 text-center relative overflow-hidden group hover:border-white/20 transition-all shadow-inner hover:shadow-[0_20px_40px_rgba(0,0,0,0.6)] hover:-translate-y-2 duration-500">
+                                            <div key={i} className={`bg-black/60 p-8 rounded-[2rem] border ${res.value > 50 ? 'border-emerald-500/50 shadow-[0_0_30px_rgba(16,185,129,0.2)]' : 'border-white/5'} text-center relative overflow-hidden group hover:border-white/20 transition-all shadow-inner hover:shadow-[0_20px_40px_rgba(0,0,0,0.6)] hover:-translate-y-2 duration-500`}>
                                                 <div className="absolute bottom-0 left-0 h-1.5 bg-current opacity-30 transition-all duration-1000 group-hover:opacity-100 group-hover:h-2" style={{ width: `${res.value}%`, color: res.color.replace('text-', '') }}></div>
                                                 <div className="absolute inset-0 bg-gradient-to-t from-current to-transparent opacity-0 group-hover:opacity-[0.08] transition-opacity duration-500 pointer-events-none" style={{ color: res.color.replace('text-', '') }}></div>
                                                 <p className="text-xs font-mono text-gray-400 uppercase tracking-[0.2em] mb-4 font-bold">{res.label}</p>
                                                 <div className="flex flex-col items-center justify-center relative z-10">
-                                                    <p className={`text-6xl font-mono font-black tracking-tighter ${res.color}`}>{res.value.toFixed(1)}<span className="text-2xl opacity-50 ml-1">%</span></p>
+                                                    <p className={`text-6xl font-mono font-black tracking-tighter ${res.color} drop-shadow-[0_0_15px_currentColor]`}>{res.value.toFixed(1)}<span className="text-2xl opacity-50 ml-1">%</span></p>
                                                     {res.prev !== null && (
                                                         <div className="flex items-center gap-2 mt-4 bg-black/60 px-4 py-1.5 rounded-full border border-white/10 shadow-inner">
                                                             <span className="text-[9px] font-mono text-gray-500 uppercase tracking-widest">Baseline:</span>
@@ -233,26 +242,38 @@ export function SpartaMode({
                                         ))}
                                     </div>
 
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 pt-10 border-t border-white/5 relative z-10">
+                                    <motion.div layout className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6 pt-10 border-t border-white/5 relative z-10">
+                                        <AnimatePresence>
                                         {[
                                             { label: 'Over 2.5', value: combatResult ? combatResult.over25 : stratosResult.over25, prev: combatResult ? stratosResult.over25 : null },
                                             { label: 'Under 2.5', value: combatResult ? combatResult.under25 : stratosResult.under25, prev: combatResult ? stratosResult.under25 : null },
                                             { label: 'BTTS (Yes)', value: combatResult ? combatResult.btts : stratosResult.btts, prev: combatResult ? stratosResult.btts : null },
-                                            { label: 'Most Likely', value: combatResult ? combatResult.mostLikelyScore : stratosResult.mostLikelyScore, prev: combatResult ? stratosResult.mostLikelyScore : null, isScore: true }
+                                            { label: 'Most Likely', value: combatResult ? combatResult.mostLikelyScore : stratosResult.mostLikelyScore, prev: combatResult ? stratosResult.mostLikelyScore : null, isScore: true },
+                                            { label: 'EV Home', value: combatResult ? combatResult.evHome : stratosResult.evHome, prev: combatResult ? stratosResult.evHome : null },
+                                            { label: 'EV Away', value: combatResult ? combatResult.evAway : stratosResult.evAway, prev: combatResult ? stratosResult.evAway : null }
                                         ].map((stat, i) => (
-                                            <div key={i} className="text-center group bg-black/40 p-6 rounded-3xl border border-white/5 hover:border-white/10 transition-all duration-300">
-                                                <p className="text-[10px] font-mono text-gray-500 uppercase tracking-[0.2em] mb-3 group-hover:text-gray-400 transition-colors font-bold">{stat.label}</p>
-                                                <p className={`text-3xl font-mono font-black tracking-tighter ${stat.isScore ? 'text-emerald-400' : 'text-white'}`}>
+                                            <motion.div 
+                                                key={stat.label} 
+                                                layout
+                                                initial={{ opacity: 0, scale: 0.9 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                exit={{ opacity: 0, scale: 0.9 }}
+                                                transition={{ delay: i * 0.05 }}
+                                                className="text-center group bg-black/40 p-4 rounded-3xl border border-white/5 hover:border-white/10 transition-all duration-300 shadow-inner hover:shadow-[0_0_20px_rgba(255,255,255,0.05)]"
+                                            >
+                                                <p className="text-[9px] font-mono text-gray-500 uppercase tracking-[0.2em] mb-2 group-hover:text-gray-400 transition-colors font-bold">{stat.label}</p>
+                                                <p className={`text-2xl font-mono font-black tracking-tighter ${stat.isScore ? 'text-emerald-400 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'text-white'}`}>
                                                     {typeof stat.value === 'number' ? `${stat.value.toFixed(1)}%` : stat.value}
                                                 </p>
                                                 {stat.prev !== null && (
-                                                    <p className="text-[10px] font-mono text-gray-600 mt-2">
+                                                    <p className="text-[9px] font-mono text-gray-600 mt-1">
                                                         {typeof stat.prev === 'number' ? `${stat.prev.toFixed(1)}%` : stat.prev}
                                                     </p>
                                                 )}
-                                            </div>
+                                            </motion.div>
                                         ))}
-                                    </div>
+                                        </AnimatePresence>
+                                    </motion.div>
                                 </div>
 
                                 {!combatResult ? (
@@ -270,7 +291,7 @@ export function SpartaMode({
                                                     <Shield className="w-7 h-7" />
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-white font-black text-xl uppercase tracking-widest">Combat Phase Ready</h3>
+                                                    <h3 className="text-white font-display font-black text-xl uppercase tracking-widest">Combat Phase Ready</h3>
                                                     <p className="text-[10px] font-mono text-emerald-500/70 uppercase tracking-[0.2em] mt-1 font-bold">Awaiting Tactical Injection</p>
                                                 </div>
                                             </div>
@@ -284,38 +305,72 @@ export function SpartaMode({
                                         <p className="text-sm text-gray-400 leading-relaxed mb-8 max-w-2xl relative z-10">The Stratos baseline is complete. You can now proceed to the Combat phase for final lineup adjustments and real-time variable injection. This will run a secondary 10,000-iteration simulation with adjusted tactical weights.</p>
                                         <button 
                                             onClick={runCombat}
-                                            className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 py-5 rounded-2xl font-black tracking-[0.3em] transition-all flex items-center justify-center gap-4 uppercase text-sm group relative z-10 shadow-[0_0_20px_rgba(16,185,129,0.1)] hover:shadow-[0_0_30px_rgba(16,185,129,0.2)]"
+                                            className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 py-5 rounded-2xl font-black tracking-[0.3em] transition-all flex items-center justify-center gap-4 uppercase text-sm group relative z-10 shadow-[0_0_20px_rgba(16,185,129,0.1)] hover:shadow-[0_0_40px_rgba(16,185,129,0.3)] overflow-hidden"
                                         >
-                                            Initialize Combat Sequence
-                                            <ChevronRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform duration-300" />
+                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                                            <span className="relative z-10">Initialize Combat Sequence</span>
+                                            <ChevronRight className="w-5 h-5 group-hover:translate-x-1.5 transition-transform duration-300 relative z-10" />
                                         </button>
                                     </motion.div>
                                 ) : (
                                     <motion.div 
                                         initial={{ opacity: 0, scale: 0.98 }}
                                         animate={{ opacity: 1, scale: 1 }}
-                                        className="glass-panel p-10 rounded-[2.5rem] border border-emerald-500/20 bg-emerald-500/10 relative overflow-hidden"
+                                        className="space-y-6"
                                     >
-                                        <div className="flex items-center justify-between mb-8">
-                                            <div className="flex items-center gap-4">
-                                                <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400">
-                                                    <Shield className="w-6 h-6" />
+                                        <div className="glass-panel p-10 rounded-[2.5rem] border border-emerald-500/20 bg-emerald-500/10 relative overflow-hidden">
+                                            <div className="flex items-center justify-between mb-8">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400">
+                                                        <Shield className="w-6 h-6" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-white font-display font-bold text-lg uppercase tracking-widest">Combat Phase Complete</h3>
+                                                        <p className="text-[10px] font-mono text-emerald-500 uppercase tracking-widest">Tactical Variables Synchronized</p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <h3 className="text-white font-bold text-lg uppercase tracking-widest">Combat Phase Complete</h3>
-                                                    <p className="text-[10px] font-mono text-emerald-500 uppercase tracking-widest">Tactical Variables Synchronized</p>
+                                                <button 
+                                                    onClick={resetSparta}
+                                                    className="text-[10px] font-mono text-emerald-400 hover:text-emerald-300 transition-colors uppercase tracking-widest border border-emerald-500/30 px-5 py-2 rounded-full bg-emerald-500/5"
+                                                >
+                                                    New Simulation
+                                                </button>
+                                            </div>
+                                            <p className="text-sm text-emerald-400/80 leading-relaxed font-mono">
+                                                [SUCCESS] Real-time variables injected. The simulation has been updated with the latest tactical parameters. Final probability vectors stabilized.
+                                            </p>
+                                        </div>
+
+                                        {aiReviews && aiReviews.length > 0 && (
+                                            <div className="glass-panel p-10 rounded-[2.5rem] border border-white/5 relative overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+                                                <div className="flex items-center gap-4 mb-8">
+                                                    <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-400 border border-blue-500/20 shadow-inner">
+                                                        <Zap className="w-6 h-6" />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-white font-display font-bold text-lg uppercase tracking-widest">AI Agent Reviews</h3>
+                                                        <p className="text-[10px] font-mono text-blue-400 uppercase tracking-widest">Multi-Model Consensus</p>
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-4">
+                                                    {aiReviews.map((review, idx) => (
+                                                        <motion.div 
+                                                            key={idx}
+                                                            initial={{ opacity: 0, y: 10 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            transition={{ delay: idx * 0.1 }}
+                                                            className="bg-black/60 p-6 rounded-2xl border border-white/5 hover:border-white/10 transition-colors"
+                                                        >
+                                                            <div className="flex items-center gap-2 mb-3">
+                                                                <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>
+                                                                <span className="text-xs font-mono text-blue-400 font-bold uppercase tracking-widest">{review.provider}</span>
+                                                            </div>
+                                                            <p className="text-sm text-gray-300 leading-relaxed">{review.review}</p>
+                                                        </motion.div>
+                                                    ))}
                                                 </div>
                                             </div>
-                                            <button 
-                                                onClick={resetSparta}
-                                                className="text-[10px] font-mono text-emerald-400 hover:text-emerald-300 transition-colors uppercase tracking-widest border border-emerald-500/30 px-5 py-2 rounded-full bg-emerald-500/5"
-                                            >
-                                                New Simulation
-                                            </button>
-                                        </div>
-                                        <p className="text-sm text-emerald-400/80 leading-relaxed font-mono">
-                                            [SUCCESS] Real-time variables injected. The simulation has been updated with the latest tactical parameters. Final probability vectors stabilized.
-                                        </p>
+                                        )}
                                     </motion.div>
                                 )}
                             </motion.div>

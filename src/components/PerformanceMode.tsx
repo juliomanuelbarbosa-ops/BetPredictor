@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { TrendingUp, TrendingDown, Target, BarChart3, PieChart, History, Zap, ShieldCheck, Activity, Brain } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, ScatterChart, Scatter, ZAxis } from 'recharts';
 
@@ -10,7 +10,7 @@ interface PerformanceModeProps {
 
 export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, bankroll }) => {
     
-    const { avgConfidence, totalStake, realizedProfit, winRate, resolvedCount, winProbDist, roi, yieldRate, leagueStats, confidenceAccuracyData } = useMemo(() => {
+    const { avgConfidence, totalStake, realizedProfit, winRate, resolvedCount, winProbDist, roi, yieldRate, leagueStats, confidenceAccuracyData, maxDrawdown } = useMemo(() => {
         if (predictions.length === 0) {
             return {
                 avgConfidence: 74,
@@ -27,7 +27,8 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, b
                     { confidence: 70, accuracy: 68 },
                     { confidence: 80, accuracy: 75 },
                     { confidence: 90, accuracy: 88 }
-                ]
+                ],
+                maxDrawdown: 4.2
             };
         }
 
@@ -41,6 +42,10 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, b
         const leagueMap: Record<string, { won: number, total: number }> = {};
         const confBuckets: Record<number, { won: number, total: number }> = {};
 
+        let maxDrawdown = 0;
+        let peak = bankroll;
+        let currentBankroll = bankroll;
+
         predictions.forEach(p => {
             if (p.actual === 'WON' || p.actual === 'LOST') {
                 const profit = p.profit !== undefined ? p.profit : (p.actual === 'WON' ? (p.stake || 0) : -(p.stake || 0));
@@ -48,6 +53,15 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, b
                 resolvedCount++;
                 resolvedStake += (p.stake || 0);
                 if (p.actual === 'WON') wonCount++;
+
+                currentBankroll += profit;
+                if (currentBankroll > peak) {
+                    peak = currentBankroll;
+                }
+                const drawdown = ((peak - currentBankroll) / peak) * 100;
+                if (drawdown > maxDrawdown) {
+                    maxDrawdown = drawdown;
+                }
 
                 const league = p.game.league || 'Other';
                 if (!leagueMap[league]) leagueMap[league] = { won: 0, total: 0 };
@@ -97,9 +111,10 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, b
                 { confidence: 70, accuracy: 68 },
                 { confidence: 80, accuracy: 75 },
                 { confidence: 90, accuracy: 88 }
-            ]
+            ],
+            maxDrawdown
         };
-    }, [predictions]);
+    }, [predictions, bankroll]);
 
     const chartData = useMemo(() => {
         if (predictions.length === 0) {
@@ -134,14 +149,15 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, b
     const stats = [
         { label: 'Avg. Confidence', value: `${avgConfidence}%`, icon: Target, color: 'text-blue-400', bg: 'bg-blue-500/10' },
         { label: 'Realized Profit', value: `${realizedProfit >= 0 ? '+' : ''}$${realizedProfit.toFixed(2)}`, icon: TrendingUp, color: realizedProfit >= 0 ? 'text-emerald-400' : 'text-red-400', bg: realizedProfit >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10' },
-        { label: 'ROI / Yield', value: `${roi.toFixed(1)}%`, icon: BarChart3, color: 'text-purple-400', bg: 'bg-purple-500/10' },
         { label: 'Win Rate', value: `${winRate}%`, icon: ShieldCheck, color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
+        { label: 'ROI / Yield', value: `${roi.toFixed(1)}%`, icon: BarChart3, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+        { label: 'Max Drawdown', value: `${maxDrawdown.toFixed(1)}%`, icon: TrendingDown, color: 'text-red-400', bg: 'bg-red-500/10' },
     ];
 
     return (
         <div className="max-w-7xl mx-auto py-8 px-4 space-y-10">
             {/* TOP STATS GRID */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
                 {stats.map((stat, idx) => (
                     <motion.div 
                         key={idx}
@@ -160,7 +176,7 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, b
                         <div className="relative z-10">
                             <p className="text-xs font-mono text-gray-400 uppercase tracking-[0.2em]">{stat.label}</p>
                             <div className="flex items-center gap-1.5 mt-2">
-                                <Activity className="w-3.5 h-3.5 text-emerald-500/70" />
+                                <Activity className="w-3.5 h-3.5 text-emerald-500/70 animate-pulse" />
                                 <span className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Live System Tracking</span>
                             </div>
                         </div>
@@ -176,7 +192,7 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, b
                         <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
                         <div className="flex items-center justify-between mb-8 relative z-10">
                             <div>
-                                <h3 className="text-white font-bold text-lg flex items-center gap-3">
+                                <h3 className="text-white font-display font-bold text-lg flex items-center gap-3">
                                     <TrendingUp className="w-5 h-5 text-emerald-400" />
                                     Bankroll Performance
                                 </h3>
@@ -192,17 +208,17 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, b
                         </div>
                         <div className="flex-1 w-full relative z-10">
                             <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={chartData}>
+                                        <AreaChart data={chartData}>
                                     <defs>
                                         <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.5}/>
+                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0.05}/>
                                         </linearGradient>
                                     </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff0a" vertical={false} />
                                     <XAxis 
                                         dataKey="name" 
-                                        stroke="#ffffff20" 
+                                        stroke="#ffffff40" 
                                         fontSize={10} 
                                         tickLine={false} 
                                         axisLine={false}
@@ -210,17 +226,18 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, b
                                         fontFamily="JetBrains Mono"
                                     />
                                     <YAxis 
-                                        stroke="#ffffff20" 
+                                        stroke="#ffffff40" 
                                         fontSize={10} 
                                         tickLine={false} 
                                         axisLine={false}
                                         tickFormatter={(val) => `$${val.toFixed(0)}`}
                                         fontFamily="JetBrains Mono"
+                                        dx={-10}
                                     />
                                     <Tooltip 
-                                        contentStyle={{ backgroundColor: '#0a0a0a', border: '1px solid #ffffff10', borderRadius: '12px', fontSize: '12px', fontFamily: 'JetBrains Mono' }}
-                                        itemStyle={{ color: '#10b981' }}
-                                        cursor={{ stroke: '#10b981', strokeWidth: 1, strokeDasharray: '5 5' }}
+                                        contentStyle={{ backgroundColor: 'rgba(10, 10, 10, 0.9)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', fontSize: '12px', fontFamily: 'JetBrains Mono', backdropFilter: 'blur(10px)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}
+                                        itemStyle={{ color: '#10b981', fontWeight: 'bold' }}
+                                        cursor={{ stroke: '#10b981', strokeWidth: 1, strokeDasharray: '4 4' }}
                                     />
                                     <Area 
                                         type="monotone" 
@@ -230,6 +247,8 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, b
                                         fillOpacity={1} 
                                         fill="url(#colorValue)" 
                                         animationDuration={2000}
+                                        activeDot={{ r: 6, fill: '#10b981', stroke: '#000', strokeWidth: 2 }}
+                                        style={{ filter: 'drop-shadow(0 0 8px rgba(16,185,129,0.5))' }}
                                     />
                                 </AreaChart>
                             </ResponsiveContainer>
@@ -291,16 +310,18 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, b
                 <div className="space-y-8">
                     <div className="glass-panel p-8 rounded-3xl border border-white/5 relative overflow-hidden group hover:border-emerald-500/30 transition-all duration-500 hover:shadow-[0_10px_40px_rgba(16,185,129,0.1)]">
                         <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-                        <h3 className="text-white font-bold text-lg mb-6 flex items-center gap-3 relative z-10">
+                        <h3 className="text-white font-display font-bold text-lg mb-6 flex items-center gap-3 relative z-10">
                             <History className="w-5 h-5 text-blue-400" />
                             System Log
                         </h3>
                         <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar relative z-10">
+                            <AnimatePresence>
                             {predictions.map((pred, idx) => (
                                 <motion.div 
-                                    key={idx}
+                                    key={pred.id || idx}
                                     initial={{ opacity: 0, x: 20 }}
                                     animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
                                     transition={{ delay: idx * 0.05 }}
                                     className="p-5 rounded-2xl bg-black/40 border border-white/5 space-y-3 hover:border-white/10 transition-colors"
                                 >
@@ -321,6 +342,7 @@ export const PerformanceMode: React.FC<PerformanceModeProps> = ({ predictions, b
                                     </div>
                                 </motion.div>
                             ))}
+                            </AnimatePresence>
                             {predictions.length === 0 && (
                                 <div className="text-center py-20">
                                     <Activity className="w-8 h-8 text-gray-800 mx-auto mb-4 animate-pulse" />

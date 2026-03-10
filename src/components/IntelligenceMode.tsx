@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bot, Send, Terminal, Cpu, Zap, Shield, Search, TrendingUp, AlertTriangle, Network } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
+import Markdown from 'react-markdown';
 import { getApiKey } from '../api/footballApi';
 import { orchestrator } from '../agents/MasterAgent';
 
@@ -75,9 +76,7 @@ export function IntelligenceMode() {
         setMessages(prev => [...prev, startMsg]);
 
         try {
-            // Simulated odds for the orchestration
-            const mockOdds = { home: 2.1, draw: 3.4, away: 3.2, movement: -0.15 };
-            const result = await orchestrator.orchestrate("Arsenal", "Liverpool", mockOdds);
+            const result = await orchestrator.orchestrate("Arsenal", "Liverpool", "Premier League");
 
             const finalMsg: Message = {
                 id: (Date.now() + 1).toString(),
@@ -175,14 +174,18 @@ export function IntelligenceMode() {
                             <Bot className="w-5 h-5 text-emerald-400" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-white tracking-tight">AI Agents</h2>
+                            <h2 className="text-xl font-display font-bold text-white tracking-tight">AI Agents</h2>
                             <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Active Intelligence</p>
                         </div>
                     </div>
 
-                    {AGENTS.map((agent) => (
-                        <button
+                    <AnimatePresence>
+                    {AGENTS.map((agent, index) => (
+                        <motion.button
                             key={agent.id}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.1 }}
                             onClick={() => setSelectedAgent(agent)}
                             className={`w-full text-left p-5 rounded-3xl border transition-all duration-500 group relative overflow-hidden ${
                                 selectedAgent.id === agent.id
@@ -195,18 +198,27 @@ export function IntelligenceMode() {
                             )}
                             <div className="flex items-center gap-4 relative z-10">
                                 <div className={`w-12 h-12 rounded-2xl bg-black/80 flex items-center justify-center border border-white/10 shadow-inner ${agent.color} ${selectedAgent.id === agent.id ? 'border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : ''}`}>
-                                    <agent.icon className="w-6 h-6" />
+                                    <agent.icon className={`w-6 h-6 ${selectedAgent.id === agent.id ? 'animate-pulse' : ''}`} />
                                 </div>
                                 <div>
-                                    <div className="text-base font-black text-white tracking-wider">{agent.name}</div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="text-base font-display font-black text-white tracking-wider">{agent.name}</div>
+                                        {selectedAgent.id === agent.id && (
+                                            <span className="flex h-2 w-2 relative">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                            </span>
+                                        )}
+                                    </div>
                                     <div className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mt-0.5">{agent.role}</div>
                                 </div>
                             </div>
                             <p className="mt-4 text-[11px] text-gray-400 leading-relaxed relative z-10 group-hover:text-gray-300 transition-colors">
                                 {agent.description}
                             </p>
-                        </button>
+                        </motion.button>
                     ))}
+                    </AnimatePresence>
 
                     <div className="mt-8 p-6 bg-black/60 border border-white/5 rounded-3xl shadow-inner relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-[50px] -mr-16 -mt-16 pointer-events-none"></div>
@@ -217,7 +229,10 @@ export function IntelligenceMode() {
                         <div className="space-y-3 relative z-10">
                             <div className="flex justify-between items-center">
                                 <span className="text-[9px] font-mono text-gray-600">Latency</span>
-                                <span className="text-[9px] font-mono text-emerald-400">12ms</span>
+                                <span className="text-[9px] font-mono text-emerald-400 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    12ms
+                                </span>
                             </div>
                             <div className="flex justify-between items-center">
                                 <span className="text-[9px] font-mono text-gray-600">Model</span>
@@ -248,7 +263,7 @@ export function IntelligenceMode() {
                                 <selectedAgent.icon className="w-7 h-7" />
                             </div>
                             <div>
-                                <h3 className="text-2xl font-black text-white tracking-tighter flex items-center gap-3">
+                                <h3 className="text-2xl font-display font-bold text-white tracking-tighter flex items-center gap-3">
                                     {selectedAgent.name} 
                                     <span className="text-emerald-500/50 text-[10px] font-mono tracking-widest uppercase border border-emerald-500/20 px-2 py-0.5 rounded-md bg-emerald-500/5">v1.0.4</span>
                                 </h3>
@@ -269,7 +284,7 @@ export function IntelligenceMode() {
                     {/* Messages Area */}
                     <div 
                         ref={scrollRef}
-                        className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-hide"
+                        className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar pr-4"
                     >
                         {messages.length === 0 && (
                             <div className="h-full flex flex-col items-center justify-center text-center opacity-30">
@@ -286,15 +301,21 @@ export function IntelligenceMode() {
                                     initial={{ opacity: 0, y: 20, scale: 0.95 }}
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     transition={{ duration: 0.4, ease: "easeOut" }}
-                                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-6`}
+                                    className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-6`}
                                 >
-                                    <div className={`max-w-[85%] rounded-[2rem] p-6 shadow-2xl ${
+                                    <div className={`max-w-[85%] rounded-[2rem] p-6 shadow-2xl relative overflow-hidden ${
                                         msg.role === 'user' 
                                             ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-50 backdrop-blur-xl rounded-tr-sm' 
                                             : 'bg-black/80 border border-white/10 text-gray-200 backdrop-blur-xl rounded-tl-sm'
                                     }`}>
+                                        {msg.role === 'user' && (
+                                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent pointer-events-none"></div>
+                                        )}
                                         {msg.role === 'agent' && (
-                                            <div className="flex items-center gap-3 mb-4 pb-3 border-b border-white/5">
+                                            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-transparent via-emerald-500/50 to-transparent"></div>
+                                        )}
+                                        {msg.role === 'agent' && (
+                                            <div className="flex items-center gap-3 mb-4 pb-3 border-b border-white/5 relative z-10">
                                                 <div className={`w-6 h-6 rounded-full bg-black/60 border border-white/10 flex items-center justify-center ${selectedAgent.color}`}>
                                                     <selectedAgent.icon className="w-3 h-3" />
                                                 </div>
@@ -302,8 +323,8 @@ export function IntelligenceMode() {
                                                 <span className="text-[9px] font-mono text-gray-600 ml-auto">{msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                             </div>
                                         )}
-                                        <div className="text-sm leading-relaxed whitespace-pre-wrap font-medium">
-                                            {msg.content}
+                                        <div className="text-sm leading-relaxed whitespace-pre-wrap font-medium relative z-10 markdown-body prose prose-invert prose-emerald max-w-none">
+                                            <Markdown>{msg.content}</Markdown>
                                         </div>
                                     </div>
                                 </motion.div>
@@ -329,22 +350,23 @@ export function IntelligenceMode() {
                     </div>
 
                     {/* Input Area */}
-                    <div className="p-8 bg-black/60 border-t border-white/5 backdrop-blur-xl relative z-20">
-                        <div className="relative">
+                    <div className="p-8 bg-black/40 border-t border-white/5 backdrop-blur-xl relative z-20">
+                        <div className="relative group">
+                            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/10 to-emerald-500/0 rounded-2xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-500 pointer-events-none blur-md"></div>
                             <input 
                                 type="text"
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                                 placeholder={`Transmit query to ${selectedAgent.name}...`}
-                                className="w-full bg-black/80 border border-white/10 rounded-2xl py-5 pl-8 pr-20 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/50 transition-all shadow-inner"
+                                className="w-full bg-black/80 border border-white/10 rounded-2xl py-5 pl-8 pr-20 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all shadow-inner relative z-10"
                             />
                             <button 
                                 onClick={() => handleSend()}
                                 disabled={!input.trim() || isTyping}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 w-14 h-14 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 flex items-center justify-center transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group border border-emerald-500/30 hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 w-14 h-14 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 flex items-center justify-center transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group/btn border border-emerald-500/30 hover:shadow-[0_0_20px_rgba(16,185,129,0.2)] z-20"
                             >
-                                <Send className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform duration-300" />
+                                <Send className="w-5 h-5 group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform duration-300" />
                             </button>
                         </div>
                         <div className="mt-6 flex items-center justify-between px-4">

@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { getApiKey } from "../api/footballApi";
+import { getApiKey, getComprehensiveMatchData } from "../api/footballApi";
 import { AgentResponse, NewsAgent } from "./NewsAgent";
 import { MarketAgent } from "./MarketAgent";
 
@@ -24,20 +24,27 @@ export class MasterAgent {
         this.ai = new GoogleGenAI({ apiKey });
     }
 
-    async orchestrate(home: string, away: string, odds: any): Promise<OrchestrationResult> {
+    async orchestrate(home: string, away: string, league: string): Promise<OrchestrationResult> {
         this.initAI();
         
-        // Run sub-agents in parallel
+        // Fetch comprehensive real-time data
+        const matchData = await getComprehensiveMatchData(home, away, league);
+
+        // Run sub-agents in parallel with real data
         const [newsResult, marketResult] = await Promise.all([
-            this.newsAgent.run(home, away),
-            this.marketAgent.run(odds)
+            this.newsAgent.run(home, away, matchData.news),
+            this.marketAgent.run(matchData.odds)
         ]);
 
-        const prompt = `You are the STRATOS Master Orchestrator. Synthesize the following reports:
+        const prompt = `You are the STRATOS Master Orchestrator. Synthesize the following reports and real-time data:
+        MATCH: ${home} vs ${away}
+        WEATHER: ${matchData.weather.temp}°C, Wind: ${matchData.weather.wind_speed}m/s
+        H2H (Last 5): ${home} Wins: ${matchData.h2h.homeWins}, ${away} Wins: ${matchData.h2h.awayWins}, Draws: ${matchData.h2h.draws}
+        
         NEWS_AGENT: ${newsResult.summary}
         MARKET_AGENT: ${marketResult.summary}
         
-        Determine if a highly profitable betting condition exists (e.g., market shift contradicts injury news).
+        Determine if a highly profitable betting condition exists (e.g., market shift contradicts injury news or weather).
         Return a JSON object with: 
         { 
             "recommendation": "specific bet recommendation", 

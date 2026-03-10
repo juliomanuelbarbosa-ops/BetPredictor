@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Brain, CloudLightning, CheckCircle, Copy, RefreshCw, Calendar, LayoutGrid, Activity, ShieldCheck, Bot } from 'lucide-react';
+import { Brain, CloudLightning, CheckCircle, Copy, RefreshCw, Calendar, LayoutGrid, Activity, ShieldCheck, Bot, DollarSign } from 'lucide-react';
 import { calculateStake } from './lib/utils';
 import { getWeather, getRealOdds, getBetStackData, getBizzoPrediction, getGameForecast, getBytezAnalysis, getPlayerMetrics, getAdvancedMetrics, getUpcomingGames, getActiveServicesCount } from './api/footballApi';
 import { predictWithModel, createAndTrainModel } from './lib/ai';
@@ -13,6 +13,7 @@ import { UpcomingMode } from './components/UpcomingMode';
 import { SettingsMode } from './components/SettingsMode';
 import { PerformanceMode } from './components/PerformanceMode';
 import { IntelligenceMode } from './components/IntelligenceMode';
+import { BettingMode } from './components/BettingMode';
 import { SpartaLogo } from './components/SpartaLogo';
 
 const leagueMap: Record<string, { oddsKey: string }> = {
@@ -47,6 +48,7 @@ export default function App() {
     const [spartaMatrix, setSpartaMatrix] = useState<any>(null);
     const [stratosResult, setStratosResult] = useState<any>(null);
     const [combatResult, setCombatResult] = useState<any>(null);
+    const [aiReviews, setAiReviews] = useState<{ provider: string, review: string }[]>([]);
 
     const runCombat = async () => {
         setIsLoading(true);
@@ -63,6 +65,12 @@ export default function App() {
             const result = runMonteCarlo(adjustedMatrix, 10000);
             setCombatResult(result);
             setPhase('COMBAT');
+            
+            setLoadingStep("Gathering expert reviews from activated AI agents...");
+            const { getSimulationReviews } = await import('./api/footballApi');
+            const reviews = await getSimulationReviews(matchInput, result);
+            setAiReviews(reviews);
+            
             showToast("Combat Phase Complete.");
         } catch (err: any) {
             showToast("Error: " + err.message, 'error');
@@ -80,7 +88,10 @@ export default function App() {
                 else if (p.bestBet === "DRAW") odds = p.game.oddsD || 3.0;
                 else if (p.bestBet === "AWAY WIN") odds = p.game.oddsA || 3.0;
 
-                const profit = won ? p.stake * (odds - 1) : -p.stake;
+                // For manual bets, the stake was already deducted when placed.
+                // If won, add the total return (stake * odds). If lost, add nothing.
+                const profit = won ? (p.isManual ? p.stake * odds : p.stake * (odds - 1)) : (p.isManual ? 0 : -p.stake);
+                
                 saveBankroll(prevBankroll => prevBankroll + profit);
                 
                 setTotalCorrect(prev => {
@@ -104,19 +115,25 @@ export default function App() {
     const deletePrediction = (predId: string) => {
         savePredictions(prev => {
             const pred = prev.find(p => p.id === predId);
-            if (pred && pred.actual !== null) {
-                saveBankroll(prevBankroll => prevBankroll - (pred.profit || 0));
-                setTotalGames(prevGames => {
-                    const updated = prevGames - 1;
-                    localStorage.setItem('totalGames', updated.toString());
-                    return updated;
-                });
-                if (pred.actual === 'WON') {
-                    setTotalCorrect(prevCorrect => {
-                        const updated = prevCorrect - 1;
-                        localStorage.setItem('totalCorrect', updated.toString());
+            if (pred) {
+                if (pred.actual !== null) {
+                    // Reverse the profit/loss
+                    saveBankroll(prevBankroll => prevBankroll - (pred.profit || 0));
+                    setTotalGames(prevGames => {
+                        const updated = prevGames - 1;
+                        localStorage.setItem('totalGames', updated.toString());
                         return updated;
                     });
+                    if (pred.actual === 'WON') {
+                        setTotalCorrect(prevCorrect => {
+                            const updated = prevCorrect - 1;
+                            localStorage.setItem('totalCorrect', updated.toString());
+                            return updated;
+                        });
+                    }
+                } else if (pred.isManual) {
+                    // If it's a pending manual bet, refund the stake
+                    saveBankroll(prevBankroll => prevBankroll + pred.stake);
                 }
             }
             return prev.filter(p => p.id !== predId);
@@ -124,7 +141,7 @@ export default function App() {
         showToast("Prediction deleted");
     };
 
-    const [mode, setMode] = useState<'SPARTA' | 'UPCOMING' | 'SETTINGS' | 'PERFORMANCE' | 'INTELLIGENCE'>('UPCOMING');
+    const [mode, setMode] = useState<'SPARTA' | 'UPCOMING' | 'BETTING' | 'SETTINGS' | 'PERFORMANCE' | 'INTELLIGENCE'>('UPCOMING');
     const [upcomingMatches, setUpcomingMatches] = useState<any[]>([]);
 
     useEffect(() => {
@@ -345,18 +362,19 @@ export default function App() {
         showToast("Detailed prediction copied!");
     };
 
+    const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
+
     const clearHistory = () => {
-        if (window.confirm("Are you sure you want to permanently delete all predictions, bankroll, and history? This cannot be undone.")) {
-            localStorage.removeItem('predictions');
-            localStorage.removeItem('bankroll');
-            localStorage.removeItem('totalCorrect');
-            localStorage.removeItem('totalGames');
-            setBankroll(1000);
-            setTotalCorrect(0);
-            setTotalGames(0);
-            savePredictions([]);
-            showToast("History cleared!");
-        }
+        localStorage.removeItem('predictions');
+        localStorage.removeItem('bankroll');
+        localStorage.removeItem('totalCorrect');
+        localStorage.removeItem('totalGames');
+        setBankroll(1000);
+        setTotalCorrect(0);
+        setTotalGames(0);
+        savePredictions([]);
+        setShowPurgeConfirm(false);
+        showToast("History cleared!");
     };
 
     const successRate = totalGames > 0 ? Math.round((totalCorrect / totalGames) * 100) : 0;
@@ -364,6 +382,7 @@ export default function App() {
     return (
         <QueryClientProvider client={queryClient}>
             <div className="bg-transparent text-gray-100 min-h-screen font-sans selection:bg-emerald-500/30 relative z-10">
+                <div className="fixed inset-0 bg-noise pointer-events-none z-[-1]"></div>
                 <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
                     {globalError && (
                     <motion.div 
@@ -382,9 +401,9 @@ export default function App() {
                 )}
                 
                 {/* HEADER */}
-                <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 mb-8 glass-panel rounded-3xl p-8 relative overflow-hidden shadow-2xl">
-                    <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
-                    <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/3 pointer-events-none"></div>
+                <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 mb-8 glass-panel rounded-3xl p-8 relative overflow-hidden shadow-2xl border border-white/5 hover:border-emerald-500/20 transition-all duration-500 hover:shadow-[0_20px_60px_rgba(16,185,129,0.1)] group/header">
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3 pointer-events-none group-hover/header:bg-emerald-500/20 transition-colors duration-700"></div>
+                    <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/3 pointer-events-none group-hover/header:bg-blue-500/20 transition-colors duration-700"></div>
                     
                     <div className="flex items-center gap-6 relative z-10">
                         <div className="w-20 h-20 bg-gradient-to-br from-emerald-400 to-emerald-900 rounded-3xl flex items-center justify-center text-3xl font-black shadow-[0_0_50px_rgba(16,185,129,0.4)] border border-emerald-400/40 relative group overflow-hidden">
@@ -393,7 +412,7 @@ export default function App() {
                             <SpartaLogo className="w-10 h-10 text-white relative z-10 transform group-hover:scale-110 transition-transform duration-500" />
                         </div>
                         <div>
-                            <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white via-emerald-100 to-emerald-400 drop-shadow-lg">
+                            <h1 className="text-5xl sm:text-6xl font-display font-bold tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white via-emerald-100 to-emerald-400 drop-shadow-lg">
                                 STRATOS<span className="text-emerald-500">.AI</span>
                             </h1>
                             <div className="flex items-center gap-3 mt-3 bg-black/40 w-fit px-4 py-1.5 rounded-full border border-white/5 backdrop-blur-md">
@@ -432,6 +451,15 @@ export default function App() {
                         </div>
 
                         <div className="flex-1 lg:flex-none flex flex-col gap-1 bg-black/60 border border-white/10 rounded-2xl px-6 py-4 shadow-inner hover:border-emerald-500/30 transition-colors group">
+                            <span className="text-[10px] text-gray-500 font-mono uppercase tracking-[0.2em] group-hover:text-emerald-500/70 transition-colors">Profit</span>
+                            <div className="text-2xl font-mono font-black flex items-baseline gap-1">
+                                <span className={bankroll - 1000 >= 0 ? 'text-emerald-400 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'text-red-400'}>
+                                    {bankroll - 1000 >= 0 ? '+' : '-'}${Math.abs(bankroll - 1000).toFixed(2)}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 lg:flex-none flex flex-col gap-1 bg-black/60 border border-white/10 rounded-2xl px-6 py-4 shadow-inner hover:border-emerald-500/30 transition-colors group">
                             <span className="text-[10px] text-gray-500 font-mono uppercase tracking-[0.2em] group-hover:text-emerald-500/70 transition-colors">Win Rate</span>
                             <div className="text-2xl font-mono font-black text-white flex items-baseline gap-1">
                                 {successRate}<span className="text-emerald-500 text-sm">%</span>
@@ -440,13 +468,13 @@ export default function App() {
                     </div>
                 </header>
 
-                <div className="flex justify-center mb-12 relative z-10 sticky top-4">
-                    <div className="glass-panel p-2 rounded-2xl flex flex-wrap justify-center gap-2 relative overflow-hidden shadow-2xl border border-white/10 backdrop-blur-xl bg-black/40">
-                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-blue-500/5 pointer-events-none"></div>
+                <div className="flex justify-center mb-12 relative z-[100] sticky top-6">
+                    <div className="p-2 rounded-2xl flex flex-nowrap overflow-x-auto no-scrollbar md:flex-wrap justify-start md:justify-center gap-2 relative overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.8)] border border-white/10 backdrop-blur-3xl bg-black/40 before:absolute before:inset-0 before:-z-10 before:bg-gradient-to-r before:from-emerald-500/10 before:via-transparent before:to-blue-500/10 w-full max-w-full">
                         
                         {[
-                            { id: 'SPARTA', label: 'SPARTA LOGIC', icon: SpartaLogo },
+                            { id: 'SPARTA', label: 'SPARTA LOGIC', icon: Brain },
                             { id: 'UPCOMING', label: 'LIVE & UPCOMING', icon: Calendar },
+                            { id: 'BETTING', label: 'BETTING', icon: DollarSign },
                             { id: 'INTELLIGENCE', label: 'AI AGENTS', icon: Bot },
                             { id: 'PERFORMANCE', label: 'PERFORMANCE', icon: Activity },
                             { id: 'SETTINGS', label: 'API SETTINGS', icon: ShieldCheck }
@@ -454,9 +482,9 @@ export default function App() {
                             <button 
                                 key={item.id}
                                 onClick={() => setMode(item.id as any)}
-                                className={`relative z-10 px-6 py-3.5 rounded-xl font-bold text-[10px] tracking-[0.2em] transition-all duration-500 flex items-center gap-3 uppercase overflow-hidden group ${
+                                className={`relative z-10 px-6 py-3.5 rounded-xl font-display font-bold text-[11px] tracking-[0.2em] transition-all duration-500 flex items-center gap-3 uppercase overflow-hidden group whitespace-nowrap flex-shrink-0 ${
                                     mode === item.id 
-                                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.15)]' 
+                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-[0_0_30px_rgba(16,185,129,0.2)]' 
                                         : 'text-gray-400 hover:text-white hover:bg-white/10 border border-transparent'
                                 }`}
                             >
@@ -468,7 +496,7 @@ export default function App() {
                                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
                                     />
                                 )}
-                                <item.icon className={`w-4 h-4 relative z-10 transition-transform duration-300 group-hover:scale-110 ${mode === item.id ? 'text-emerald-400' : 'text-gray-500 group-hover:text-gray-300'}`} />
+                                <item.icon className={`w-4 h-4 relative z-10 transition-transform duration-300 group-hover:scale-110 ${mode === item.id ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'text-gray-500 group-hover:text-gray-300'}`} />
                                 <span className="relative z-10">{item.label}</span>
                             </button>
                         ))}
@@ -494,12 +522,14 @@ export default function App() {
                                 stratosResult={stratosResult}
                                 spartaMatrix={spartaMatrix}
                                 combatResult={combatResult}
+                                aiReviews={aiReviews}
                                 runCombat={runCombat}
                                 resetSparta={() => {
                                     setPhase('STRATOS');
                                     setSpartaMatrix(null);
                                     setStratosResult(null);
                                     setCombatResult(null);
+                                    setAiReviews([]);
                                     setMatchInput("");
                                 }}
                             />
@@ -525,6 +555,18 @@ export default function App() {
                                 }}
                             />
                         )}
+                        {mode === 'BETTING' && (
+                            <BettingMode 
+                                upcomingMatches={upcomingMatches}
+                                bankroll={bankroll}
+                                predictions={predictions}
+                                saveBankroll={saveBankroll}
+                                savePredictions={savePredictions}
+                                showToast={showToast}
+                                isLoading={isLoading}
+                                fetchUpcoming={fetchUpcoming}
+                            />
+                        )}
                         {mode === 'SETTINGS' && <SettingsMode />}
                         {mode === 'PERFORMANCE' && <PerformanceMode predictions={predictions} bankroll={bankroll} />}
                         {mode === 'INTELLIGENCE' && <IntelligenceMode />}
@@ -533,10 +575,55 @@ export default function App() {
 
                 {/* FOOTER */}
                 <footer className="mt-20 text-center text-xs text-gray-600 pb-12 font-mono flex flex-col items-center gap-4">
-                    <button onClick={clearHistory} className="hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 transition-all duration-300 border border-white/5 rounded-lg px-6 py-2 tracking-widest uppercase">PURGE SYSTEM DATA</button>
+                    <button onClick={() => setShowPurgeConfirm(true)} className="hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 transition-all duration-300 border border-white/5 rounded-lg px-6 py-2 tracking-widest uppercase font-display font-bold">PURGE SYSTEM DATA</button>
                     <p className="tracking-widest opacity-50">STRATOS.AI // SPARTA PROTOCOL // T-MINUS 60M</p>
                 </footer>
             </div>
+
+            {/* PURGE CONFIRMATION MODAL */}
+            <AnimatePresence>
+                {showPurgeConfirm && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-black/90 border border-red-500/30 rounded-3xl p-8 max-w-md w-full shadow-[0_0_50px_rgba(239,68,68,0.15)] relative overflow-hidden"
+                        >
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/0 via-red-500 to-red-500/0"></div>
+                            
+                            <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-6">
+                                <ShieldCheck className="w-8 h-8 text-red-400" />
+                            </div>
+                            
+                            <h3 className="text-xl font-display font-bold text-white text-center mb-2">Confirm Data Purge</h3>
+                            <p className="text-sm text-gray-400 text-center mb-8 font-mono leading-relaxed">
+                                Are you sure you want to permanently delete all predictions, bankroll, and history? <span className="text-red-400 font-bold">This action cannot be undone.</span>
+                            </p>
+                            
+                            <div className="flex gap-4">
+                                <button 
+                                    onClick={() => setShowPurgeConfirm(false)}
+                                    className="flex-1 py-3 rounded-xl border border-white/10 text-white font-mono text-sm hover:bg-white/5 transition-colors"
+                                >
+                                    CANCEL
+                                </button>
+                                <button 
+                                    onClick={clearHistory}
+                                    className="flex-1 py-3 rounded-xl bg-red-500/20 border border-red-500/50 text-red-400 font-mono text-sm font-bold hover:bg-red-500 hover:text-white transition-all shadow-[0_0_20px_rgba(239,68,68,0.2)]"
+                                >
+                                    CONFIRM PURGE
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* TOAST */}
             <AnimatePresence>

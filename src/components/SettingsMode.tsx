@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Key, Save, Trash2, Globe, Shield, Cpu, Cloud, Trophy, Zap } from 'lucide-react';
 
 interface ApiKey {
@@ -204,6 +204,22 @@ const API_SERVICES: ApiKey[] = [
 
     // --- OTHER ---
     {
+        id: 'newsapi',
+        name: 'NewsAPI',
+        description: 'Real-time global news for injury and team updates.',
+        envVar: 'VITE_NEWSAPI_KEY',
+        icon: <Globe className="w-4 h-4" />,
+        category: 'Other'
+    },
+    {
+        id: 'xapi',
+        name: 'X (Twitter) API',
+        description: 'Real-time social sentiment and breaking news.',
+        envVar: 'VITE_X_API_KEY',
+        icon: <Globe className="w-4 h-4" />,
+        category: 'Other'
+    },
+    {
         id: 'twilio',
         name: 'Twilio',
         description: 'Send SMS and voice alerts for critical betting signals.',
@@ -310,7 +326,7 @@ export const SettingsMode: React.FC = () => {
                             {isLocked ? <Shield className="w-10 h-10 text-emerald-500/50" /> : <Zap className="w-10 h-10 text-emerald-400 animate-pulse" />}
                         </div>
                         <div>
-                            <h2 className="text-3xl font-black text-white tracking-tighter uppercase">Stratos Vault</h2>
+                            <h2 className="text-3xl font-display font-black text-white tracking-tighter uppercase">Stratos Vault</h2>
                             <div className="flex items-center gap-3 mt-1">
                                 <div className={`h-2 w-2 rounded-full ${vaultStatus === 'SECURE' ? 'bg-emerald-500' : vaultStatus === 'UNLOCKED' ? 'bg-blue-400' : 'bg-gray-600'}`}></div>
                                 <span className="text-[10px] font-mono text-gray-500 uppercase tracking-[0.3em]">Status: {vaultStatus}</span>
@@ -397,13 +413,16 @@ export const SettingsMode: React.FC = () => {
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <motion.div layout className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <AnimatePresence>
                 {filteredServices.map((service) => (
                     <motion.div 
                         key={service.id}
                         layout
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ duration: 0.3 }}
                         className="glass-panel p-8 rounded-3xl border border-white/5 hover:border-emerald-500/30 transition-all duration-500 group hover:shadow-[0_10px_40px_rgba(16,185,129,0.1)] hover:-translate-y-1 relative overflow-hidden"
                     >
                         <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
@@ -468,7 +487,8 @@ export const SettingsMode: React.FC = () => {
                         </div>
                     </motion.div>
                 ))}
-            </div>
+                </AnimatePresence>
+            </motion.div>
 
             <div className="mt-12 p-6 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
                 <div className="flex gap-4">

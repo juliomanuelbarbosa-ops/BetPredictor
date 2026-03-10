@@ -15,10 +15,13 @@ export class NewsAgent {
         this.ai = new GoogleGenAI({ apiKey });
     }
 
-    async run(home: string, away: string): Promise<AgentResponse> {
+    async run(home: string, away: string, realNews: string = "No recent news."): Promise<AgentResponse> {
         this.initAI();
         const prompt = `Analyze current news, sentiment, and injury updates for ${home} vs ${away}. 
-        Identify any critical late-breaking news that could impact the match outcome.
+        Here is the latest real-time news data fetched from our APIs:
+        ${realNews}
+        
+        Identify any critical late-breaking news that could impact the match outcome based on this data.
         Return a JSON object with: { "sentiment": "positive|negative|neutral", "injuries": ["list"], "summary": "short summary" }`;
 
         const response = await this.ai!.models.generateContent({
