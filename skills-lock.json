@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "skills": {
+    "betting": {
+      "source": "machina-sports/sports-skills",
+      "sourceType": "github",
+      "computedHash": "68553920d1e81e540a915509c5ccd1854862c7610adb4608605fdfe410ac25d1"
+    },
+    "cbb-data": {
+      "source": "machina-sports/sports-skills",
+      "sourceType": "github",
+      "computedHash": "4b342adc70f209ac656896826a83f7e510a72afadcc57e4912a9c2c361227bf8"
+    },
+    "cfb-data": {
+      "source": "machina-sports/sports-skills",
+      "sourceType": "github",
+      "computedHash": "7efff11f20a37485de9770649507df8879bb70ea461779ae9efb4c7a751b732f"
+    },
+    "football-data": {
+      "source": "machina-sports/sports-skills",
+      "sourceType": "github",
+      "computedHash": "0242e8ca77778c07f441303a8ea3aef6ce59662d551854b29240ced72b184ce1"
+    },
+    "golf-data": {
+      "source": "machina-sports/sports-skills",
+      "sourceType": "github",
+      "computedHash": "ac4777101a6542e951f523d754f5ff59abeeeb8b1401a2eaa5adfc06d361cb32"
+    },
+    "kalshi": {
+      "source": "machina-sports/sports-skills",
+      "sourceType": "github",
+      "computedHash": "b2d42e7041c28e739e3d850ea09c152f5692b40ea96bd031c87cdb8b5aa97977"
+    },
+    "markets": {
+      "source": "machina-sports/sports-skills",
+      "sourceType": "github",
+      "computedHash": "24e8fed7613990f85854dec26a484a725ed8bbe54c2ab25f3cb07857e9e8299a"
+    },
+    "mlb-data": {
+      "source": "machina-sports/sports-skills",
+      "sourceType": "github",
+      "computedHash": "576d0f098795cca3a55611647a0101b517ae994524d78c9e3b019ca681dd19ba"
+    },
+    "nba-data": {
+      "source": "machina-sports/sports-skills",
+      "sourceType": "github",
+      "computedHash": "724d57bdb49249f4637b0b8fc20c1a22f1168c8a82592254edf52299f0202962"
+    },
+    "nfl-data": {
+      "source": "machina-sports/sports-skills",
+      "sourceType": "github",
+      "computedHash": "be3823024d5d5abffdd3a19200b257649c5ef25b32291b0b3ecc244f8895265a"
+    },
+    "nhl-data": {
+      "source": "machina-sports/sports-skills",
+      "sourceType": "github",
+      "computedHash": "129cf6058116be62782b5f4159813e487f1371e586eaf8c205c63c5f7c3bd6e0"
+    },
+    "polymarket": {
+      "source": "machina-sports/sports-skills",
+      "sourceType": "github",
+      "computedHash": "dab1876808778a13fc197df3635e50323dec67d324946eaad9b73c6b8fb8738f"
+    },
+    "sports-news": {
+      "source": "machina-sports/sports-skills",
+      "sourceType": "github",
+      "computedHash": "22027d086e04af2a6758150406e96202192c5704bffc953f9a4bc5fc202458f5"
+    },
+    "tennis-data": {
+      "source": "machina-sports/sports-skills",
+      "sourceType": "github",
+      "computedHash": "15172291bf3bd58ae26b1786d390ce773bcbf0b88182fb2553fd7db460f767e1"
+    },
+    "volleyball-data": {
+      "source": "machina-sports/sports-skills",
+      "sourceType": "github",
+      "computedHash": "a3aadd6a3f489d27715ff8045d3841cfa4d738f2bf2efb3ec330cbed9db6e038"
+    },
+    "wnba-data": {
+      "source": "machina-sports/sports-skills",
+      "sourceType": "github",
+      "computedHash": "dd75ecc5199767c9b44dd833c7932d34d0f5fe79ffdfdadf9665b12bfee9cf04"
+    }
+  }
+}

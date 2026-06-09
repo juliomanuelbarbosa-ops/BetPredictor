@@ -1,0 +1,266 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - bankroll: number (required)
+    //   - totalCorrect: number (required)
+    //   - totalGames: number (required)
+    //   - role: string (required, 'user' or 'admin')
+    //   - email: string (required)
+    //
+    // Collection: predictions
+    // Document ID: {predictionId}
+    // Fields:
+    //   - userId: string (required)
+    //   - game: map (required)
+    //   - bestBet: string (required)
+    //   - confidence: number (required)
+    //   - stake: number (required)
+    //   - createdAt: timestamp (required)
+    //   - probs: list
+    //   - edge: number
+    //   - valueText: string
+    //   - predScore: string
+    //   - features: list
+    //   - actual: string
+    //   - bytezAnalysis: map
+    //   - isManual: boolean
+    //
+    // Collection: odds_snapshots
+    // Document ID: {snapshotId}
+    // Fields:
+    //   - matchId: string (required)
+    //   - home: string (required)
+    //   - away: string (required)
+    //   - league: string (required)
+    //   - oddsH: number (required)
+    //   - oddsD: number (required)
+    //   - oddsA: number (required)
+    //   - timestamp: timestamp (required)
+    //   - bookmaker: string
+    //
+    // Collection: value_bets
+    // Document ID: {betId}
+    // Fields:
+    //   - matchId: string (required)
+    //   - home: string (required)
+    //   - away: string (required)
+    //   - league: string (required)
+    //   - type: string (required)
+    //   - edge: number (required)
+    //   - prob: number (required)
+    //   - odds: number (required)
+    //   - timestamp: timestamp (required)
+    //
+    // Collection: bankroll_history
+    // Document ID: {historyId}
+    // Fields:
+    //   - userId: string (required)
+    //   - amount: number (required)
+    //   - timestamp: timestamp (required)
+    //
+    // Collection: crawler_logs
+    // Document ID: {logId}
+    // Fields:
+    //   - cycleAt: timestamp (required)
+    //   - results: list (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    function uidUnchanged() {
+      return !('userId' in request.resource.data) || request.resource.data.userId == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('userId' in request.resource.data) || request.resource.data.userId == resource.data.userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        (request.auth.token.email == "julio.manuel.barbosa@gmail.com" && request.auth.token.email_verified == true)
+      );
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUser(data) {
+      return data.keys().hasOnly(['bankroll', 'totalCorrect', 'totalGames', 'role', 'email']) &&
+             data.bankroll is number &&
+             data.totalCorrect is number && data.totalCorrect >= 0 &&
+             data.totalGames is number && data.totalGames >= 0 &&
+             data.role in ['user', 'admin'] &&
+             isValidEmail(data.email);
+    }
+
+    function isValidPrediction(data) {
+      return data.keys().hasOnly(['userId', 'game', 'bestBet', 'confidence', 'stake', 'createdAt', 'probs', 'edge', 'valueText', 'predScore', 'features', 'actual', 'bytezAnalysis', 'isManual', 'profit']) &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.game is map && data.game.size() < 20 &&
+             data.bestBet is string && data.bestBet.size() < 100 &&
+             data.confidence is number && data.confidence >= 0 && data.confidence <= 100 &&
+             data.stake is number && data.stake > 0 &&
+             data.createdAt is timestamp &&
+             (!('probs' in data) || (data.probs is list && data.probs.size() < 10)) &&
+             (!('features' in data) || (data.features is list && data.features.size() < 50)) &&
+             (!('bytezAnalysis' in data) || (data.bytezAnalysis is map && data.bytezAnalysis.size() < 20));
+    }
+
+    function isValidOddsSnapshot(data) {
+      return data.keys().hasOnly(['matchId', 'home', 'away', 'league', 'oddsH', 'oddsD', 'oddsA', 'timestamp', 'bookmaker']) &&
+             data.matchId is string && data.matchId.size() < 100 &&
+             data.home is string && data.away is string && data.league is string &&
+             data.oddsH is number && data.oddsH > 1 &&
+             data.oddsD is number && data.oddsD > 1 &&
+             data.oddsA is number && data.oddsA > 1 &&
+             data.timestamp is timestamp &&
+             (!('bookmaker' in data) || (data.bookmaker is string && data.bookmaker.size() < 100));
+    }
+
+    function isValidValueBet(data) {
+      return data.keys().hasOnly(['id', 'matchId', 'home', 'away', 'league', 'type', 'edge', 'prob', 'odds', 'timestamp']) &&
+             data.matchId is string &&
+             data.home is string && data.away is string &&
+             data.type in ['HOME', 'DRAW', 'AWAY'] &&
+             data.edge is number &&
+             data.prob is number &&
+             data.odds is number &&
+             data.timestamp is timestamp;
+    }
+
+    function isValidBankrollHistory(data) {
+      return data.keys().hasOnly(['userId', 'amount', 'timestamp']) &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.amount is number &&
+             data.timestamp is timestamp;
+    }
+
+    function isValidGraphNode(data) {
+      return data.keys().hasOnly(['id', 'type', 'name', 'attributes', 'updatedAt']) &&
+             data.id is string && data.id.size() < 100 &&
+             data.type in ['Team', 'Player', 'Manager'] &&
+             data.name is string && data.name.size() < 200 &&
+             data.attributes is map && data.attributes.size() < 50 &&
+             data.updatedAt is string;
+    }
+
+    function isValidGraphEdge(data) {
+      return data.keys().hasOnly(['id', 'sourceId', 'targetId', 'type', 'attributes', 'timestamp']) &&
+             data.id is string && data.id.size() < 100 &&
+             data.sourceId is string && data.sourceId.size() < 100 &&
+             data.targetId is string && data.targetId.size() < 100 &&
+             data.type in ['PlayedAgainst', 'ManagedBy', 'PlaysFor', 'ScoredAgainst'] &&
+             data.attributes is map && data.attributes.size() < 50 &&
+             data.timestamp is string;
+    }
+
+    function isValidTeamMemory(data) {
+      return data.keys().hasOnly(['teamId', 'shortTerm', 'mediumTerm', 'longTerm', 'updatedAt']) &&
+             data.teamId is string && data.teamId.size() < 100 &&
+             data.shortTerm is map && data.shortTerm.size() < 10 &&
+             data.mediumTerm is map && data.mediumTerm.size() < 10 &&
+             data.longTerm is map && data.longTerm.size() < 10 &&
+             data.updatedAt is string;
+    }
+
+    function isValidCrawlerLog(data) {
+      return data.keys().hasOnly(['cycleAt', 'results']) &&
+             data.cycleAt is timestamp &&
+             data.results is list && data.results.size() < 50;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
+      allow update: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin()) && request.resource.data.email == resource.data.email;
+      allow delete: if isAdmin();
+    }
+
+    match /predictions/{predictionId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid || isAdmin();
+      allow create: if isAuthenticated() && isValidPrediction(request.resource.data) && uidUnchanged();
+      allow update: if isAuthenticated() && isDocOwner() && isValidPrediction(request.resource.data) && uidNotModified() && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /odds_snapshots/{snapshotId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidOddsSnapshot(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /value_bets/{betId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidValueBet(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /bankroll_history/{historyId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid || isAdmin();
+      allow create: if isAuthenticated() && isValidBankrollHistory(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /kg_nodes/{nodeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidGraphNode(request.resource.data);
+      allow update: if isAdmin() && isValidGraphNode(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /kg_edges/{edgeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidGraphEdge(request.resource.data);
+      allow update: if isAdmin() && isValidGraphEdge(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /team_memory/{teamId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidTeamMemory(request.resource.data);
+      allow update: if isAdmin() && isValidTeamMemory(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /crawler_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}

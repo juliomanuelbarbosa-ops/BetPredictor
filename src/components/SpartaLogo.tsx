@@ -13,7 +13,7 @@ export const SpartaLogo = ({ className = "w-8 h-8", ...props }: React.SVGProps<S
             {/* Tech Crest / Bar Chart */}
             <path 
                 d="M12 0 L12 5 M8 1.5 L8 6 M16 1.5 L16 6 M4 5 L4 8 M20 5 L20 8" 
-                stroke="#10b981" 
+                stroke="#17f1d1" 
                 strokeWidth="2" 
                 strokeLinecap="round" 
             />
@@ -25,7 +25,7 @@ export const SpartaLogo = ({ className = "w-8 h-8", ...props }: React.SVGProps<S
             />
             
             {/* Glowing Eyes */}
-            <g filter="url(#glow)" className="animate-pulse text-emerald-400">
+            <g filter="url(#glow)" className="animate-pulse text-stratos-accent">
                 <rect x="7.5" y="13.5" width="2.5" height="2" fill="currentColor" />
                 <rect x="14" y="13.5" width="2.5" height="2" fill="currentColor" />
             </g>

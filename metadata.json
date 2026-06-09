@@ -1,5 +1,6 @@
 {
-  "name": "Sparta",
-  "description": "",
-  "requestFramePermissions": []
+  "name": "SPARTA Engine V 3.0",
+  "description": "AI Sports Betting Intelligence",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

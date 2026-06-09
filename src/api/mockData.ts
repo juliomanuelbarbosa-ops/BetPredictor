@@ -90,11 +90,17 @@ class FootballDataService {
         return this.matches;
     }
 
-    getTeamForm(team: string, upToDate?: string): { pts: number, gs: number, gc: number, sot: number, yc: number, rc: number } {
+    getTeamForm(team: string, upToDate?: string, venue?: 'home' | 'away'): { pts: number, gs: number, gc: number, sot: number, yc: number, rc: number } {
         let teamMatches = this.matches.filter(m => 
             m.HomeTeam.toLowerCase().includes(team.toLowerCase()) || 
             m.AwayTeam.toLowerCase().includes(team.toLowerCase())
         );
+
+        if (venue === 'home') {
+            teamMatches = teamMatches.filter(m => m.HomeTeam.toLowerCase().includes(team.toLowerCase()));
+        } else if (venue === 'away') {
+            teamMatches = teamMatches.filter(m => m.AwayTeam.toLowerCase().includes(team.toLowerCase()));
+        }
 
         if (upToDate) {
             const limitDate = new Date(upToDate).getTime();
@@ -113,7 +119,8 @@ class FootballDataService {
 
         for (let i = 0; i < last5.length; i++) {
             const m = last5[i];
-            const weight = 0.6 + (0.1 * i);
+            // More aggressive weighting for recent form
+            const weight = 0.4 + (0.15 * i);
             totalWeight += weight;
 
             const isHome = m.HomeTeam.toLowerCase().includes(team.toLowerCase());
@@ -183,19 +190,30 @@ class FootballDataService {
         let homeWins = 0;
         let awayWins = 0;
         let draws = 0;
+        let totalWeight = 0;
 
-        for (const m of h2h) {
+        for (let i = 0; i < h2h.length; i++) {
+            const m = h2h[i];
+            const weight = 0.5 + (0.1 * i); // Weight more recent H2H matches
+            totalWeight += weight;
+
             const isHomeOriginal = m.HomeTeam.toLowerCase().includes(home.toLowerCase());
-            if (m.FTR === 'D') draws++;
-            else if ((m.FTR === 'H' && isHomeOriginal) || (m.FTR === 'A' && !isHomeOriginal)) homeWins++;
-            else awayWins++;
+            if (m.FTR === 'D') draws += weight;
+            else if ((m.FTR === 'H' && isHomeOriginal) || (m.FTR === 'A' && !isHomeOriginal)) homeWins += weight;
+            else awayWins += weight;
         }
 
         if (h2h.length === 0) {
             return { homeWins: 2, awayWins: 2, draws: 1 };
         }
 
-        return { homeWins, awayWins, draws };
+        const normalizationFactor = 5 / totalWeight;
+
+        return { 
+            homeWins: homeWins * normalizationFactor, 
+            awayWins: awayWins * normalizationFactor, 
+            draws: draws * normalizationFactor 
+        };
     }
 
     getTeamFormResults(team: string): string[] {

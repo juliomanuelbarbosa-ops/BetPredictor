@@ -4,4 +4,5 @@
     <string name="title_activity_main">Sparta</string>
     <string name="package_name">com.sparta.app</string>
     <string name="custom_url_scheme">com.sparta.app</string>
+    <string name="google_client_id">1067794861975-4ucb81a5u3gggc4paleb3rgmp3uua73g.apps.googleusercontent.com</string>
 </resources>

@@ -1,0 +1,280 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and global stats",
+      "type": "object",
+      "properties": {
+        "bankroll": {
+          "type": "number",
+          "description": "Current bankroll"
+        },
+        "totalCorrect": {
+          "type": "number",
+          "description": "Total correct predictions"
+        },
+        "totalGames": {
+          "type": "number",
+          "description": "Total resolved games"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["user", "admin"],
+          "description": "User role"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User email address"
+        }
+      },
+      "required": ["bankroll", "totalCorrect", "totalGames", "role", "email"]
+    },
+    "Prediction": {
+      "title": "Prediction",
+      "description": "A match prediction or manual bet",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "ID of the user who made the prediction"
+        },
+        "game": {
+          "type": "object",
+          "description": "Match details"
+        },
+        "probs": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "Probabilities"
+        },
+        "bestBet": {
+          "type": "string",
+          "description": "The recommended or chosen bet"
+        },
+        "confidence": {
+          "type": "number",
+          "description": "Confidence percentage"
+        },
+        "edge": {
+          "type": "number",
+          "description": "Calculated edge"
+        },
+        "valueText": {
+          "type": "string",
+          "description": "Value text"
+        },
+        "predScore": {
+          "type": "string",
+          "description": "Predicted score"
+        },
+        "stake": {
+          "type": "number",
+          "description": "Stake amount"
+        },
+        "features": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "Model features"
+        },
+        "actual": {
+          "type": "string",
+          "description": "Actual outcome (WON, LOST, null)"
+        },
+        "bytezAnalysis": {
+          "type": "object",
+          "description": "Analysis report"
+        },
+        "isManual": {
+          "type": "boolean",
+          "description": "If the bet was placed manually"
+        },
+        "modelUncertainty": {
+          "type": "number",
+          "description": "Model uncertainty"
+        },
+        "osAnalysis": {
+          "type": "object",
+          "description": "OS analysis"
+        },
+        "profit": {
+          "type": "number",
+          "description": "Profit"
+        },
+        "votes": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "Votes"
+        },
+        "disagreement": {
+          "type": "number",
+          "description": "Disagreement score"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["userId", "game", "bestBet", "confidence", "stake", "createdAt"]
+    },
+    "OddsSnapshot": {
+      "title": "OddsSnapshot",
+      "description": "A snapshot of odds for a match at a specific time",
+      "type": "object",
+      "properties": {
+        "matchId": {
+          "type": "string",
+          "description": "Unique ID of the match"
+        },
+        "oddsH": {
+          "type": "number",
+          "description": "Home win odds"
+        },
+        "oddsD": {
+          "type": "number",
+          "description": "Draw odds"
+        },
+        "oddsA": {
+          "type": "number",
+          "description": "Away win odds"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Time of the snapshot"
+        },
+        "bookmaker": {
+          "type": "string",
+          "description": "Source bookmaker"
+        }
+      },
+      "required": ["matchId", "oddsH", "oddsD", "oddsA", "timestamp"]
+    },
+    "BankrollHistory": {
+      "title": "BankrollHistory",
+      "description": "Historical record of user bankroll",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "ID of the user"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Bankroll amount at this time"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Time of the record"
+        }
+      },
+      "required": ["userId", "amount", "timestamp"]
+    },
+    "GraphNode": {
+      "title": "GraphNode",
+      "description": "A node in the football knowledge graph (Team, Player, Manager)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["Team", "Player", "Manager"] },
+        "name": { "type": "string" },
+        "attributes": { "type": "object" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "type", "name", "attributes", "updatedAt"]
+    },
+    "GraphEdge": {
+      "title": "GraphEdge",
+      "description": "An edge in the football knowledge graph (PlayedAgainst, ManagedBy, PlaysFor)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "sourceId": { "type": "string" },
+        "targetId": { "type": "string" },
+        "type": { "type": "string", "enum": ["PlayedAgainst", "ManagedBy", "PlaysFor", "ScoredAgainst"] },
+        "attributes": { "type": "object" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "sourceId", "targetId", "type", "attributes", "timestamp"]
+    },
+    "TeamMemory": {
+      "title": "TeamMemory",
+      "description": "Temporal memory of a team's performance and psychology",
+      "type": "object",
+      "properties": {
+        "teamId": { "type": "string" },
+        "shortTerm": { "type": "object" },
+        "mediumTerm": { "type": "object" },
+        "longTerm": { "type": "object" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["teamId", "shortTerm", "mediumTerm", "longTerm", "updatedAt"]
+    },
+    "MiroFishSimulation": {
+      "title": "MiroFishSimulation",
+      "description": "A multi-agent simulation session",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "topic": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "topic", "status", "createdAt"]
+    },
+    "MiroFishMessage": {
+      "title": "MiroFishMessage",
+      "description": "A message within a simulation",
+      "type": "object",
+      "properties": {
+        "simulationId": { "type": "string" },
+        "agentId": { "type": "string" },
+        "name": { "type": "string" },
+        "avatar": { "type": "string" },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["simulationId", "agentId", "name", "avatar", "content", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "/predictions/{predictionId}": {
+      "schema": { "$ref": "#/entities/Prediction" },
+      "description": "User predictions"
+    },
+    "/odds_history/{snapshotId}": {
+      "schema": { "$ref": "#/entities/OddsSnapshot" },
+      "description": "Historical odds snapshots"
+    },
+    "/bankroll_history/{historyId}": {
+      "schema": { "$ref": "#/entities/BankrollHistory" },
+      "description": "User bankroll history"
+    },
+    "/kg_nodes/{nodeId}": {
+      "schema": { "$ref": "#/entities/GraphNode" },
+      "description": "Knowledge Graph Nodes"
+    },
+    "/kg_edges/{edgeId}": {
+      "schema": { "$ref": "#/entities/GraphEdge" },
+      "description": "Knowledge Graph Edges"
+    },
+    "/team_memory/{teamId}": {
+      "schema": { "$ref": "#/entities/TeamMemory" },
+      "description": "Team Temporal Memory"
+    },
+    "/mirofish_simulations/{simulationId}": {
+      "schema": { "$ref": "#/entities/MiroFishSimulation" },
+      "description": "MiroFish Simulation Sessions"
+    },
+    "/mirofish_messages/{messageId}": {
+      "schema": { "$ref": "#/entities/MiroFishMessage" },
+      "description": "MiroFish Simulation Messages"
+    }
+  }
+}
