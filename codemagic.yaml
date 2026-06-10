@@ -13,7 +13,11 @@ workflows:
       - name: Fix Gradle Wrapper
         script: |
           cd android
-          curl -sL https://raw.githubusercontent.com/gradle/gradle/v8.10.2/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
+          # Download a known working gradle distribution to regenerate the wrapper
+          curl -sL https://services.gradle.org/distributions/gradle-8.10.2-bin.zip -o gradle.zip
+          unzip -q gradle.zip
+          ./gradle-8.10.2/bin/gradle wrapper --gradle-version 8.10.2
+          rm -rf gradle.zip gradle-8.10.2
       - name: Build Android App (APK)
         script: |
           cd android
