@@ -10,6 +10,10 @@ workflows:
         script: npm install
       - name: Build web app and sync Capacitor
         script: npm run build:android
+      - name: Fix Gradle Wrapper
+        script: |
+          cd android
+          curl -sL https://raw.githubusercontent.com/gradle/gradle/v8.10.2/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
       - name: Build Android App (APK)
         script: |
           cd android
