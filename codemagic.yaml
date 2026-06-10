@@ -10,14 +10,6 @@ workflows:
         script: npm install
       - name: Build web app and sync Capacitor
         script: npm run build:android
-      - name: Fix Gradle Wrapper
-        script: |
-          cd android
-          # Download a known working gradle distribution to regenerate the wrapper
-          curl -sL https://services.gradle.org/distributions/gradle-8.10.2-bin.zip -o gradle.zip
-          unzip -q gradle.zip
-          ./gradle-8.10.2/bin/gradle wrapper --gradle-version 8.10.2
-          rm -rf gradle.zip gradle-8.10.2
       - name: Build Android App (APK)
         script: |
           cd android
