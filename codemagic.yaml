@@ -8,6 +8,16 @@ workflows:
       - name: Set execute permission on gradlew
         script: chmod +x android/gradlew
 
+      - name: Fix Gradle wrapper jar
+        script: |
+          cd android
+          curl -L "https://github.com/gradle/gradle/raw/v8.14.3/gradle/wrapper/gradle-wrapper.jar" \
+            -o gradle/wrapper/gradle-wrapper.jar 2>/dev/null || \
+          gradle wrapper --gradle-version 8.14.3 2>/dev/null || \
+          (mkdir -p gradle/wrapper && \
+           wget -q "https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar" \
+             -O gradle/wrapper/gradle-wrapper.jar)
+
       - name: Build Debug APK
         script: |
           cd android
