@@ -13,6 +13,7 @@ workflows:
       - name: Build Android App (APK)
         script: |
           cd android
+          curl -sL "https://raw.githubusercontent.com/gradle/gradle/v8.10.2/gradle/wrapper/gradle-wrapper.jar" -o gradle/wrapper/gradle-wrapper.jar
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
     artifacts:
